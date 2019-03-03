@@ -25,5 +25,9 @@
   "bugs": {
     "url": "https://github.com/shiveshnavin/node_paytm/issues"
   },
-  "homepage": "https://github.com/shiveshnavin/node_paytm#readme"
+  "homepage": "https://github.com/shiveshnavin/node_paytm#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "mongoose": "^5.4.16"
+  }
 }
