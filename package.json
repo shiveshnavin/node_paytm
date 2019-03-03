@@ -1,0 +1,29 @@
+{
+  "name": "node_paytm",
+  "version": "1.0.0",
+  "description": "Paytm Gateway Integration using NodeJS",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shiveshnavin/node_paytm.git"
+  },
+  "keywords": [
+    "nodejs",
+    "paytm",
+    "payment",
+    "gateway",
+    "paytm",
+    "api",
+    "paytm",
+    "nodejs"
+  ],
+  "author": "Shivesh Navin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shiveshnavin/node_paytm/issues"
+  },
+  "homepage": "https://github.com/shiveshnavin/node_paytm#readme"
+}
