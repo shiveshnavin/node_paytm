@@ -16,8 +16,8 @@ module.exports=(app,express)=>{
     
     app.set('view engine', 'handlebars');
      
-    app.use(express.static(path.join(__dirname, '../../public'))); 
-
+    app.use("/_pay",express.static(path.join(__dirname, '../../public'))); 
+ 
     app.use('/'+config.path_prefix , router);
      
     router.all('/', function(req,res)
