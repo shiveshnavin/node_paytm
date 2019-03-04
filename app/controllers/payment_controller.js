@@ -14,6 +14,8 @@ exports.home=(req,res)=>{
 exports.init=(req,res)=>{
 
 
+    
+
     res.render(vp+"init.hbs",packageInfo)
 
 
