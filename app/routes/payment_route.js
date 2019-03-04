@@ -7,23 +7,17 @@ module.exports=(app,express)=>{
     var pc=require('../controllers/payment_controller.js')
     var router=express.Router()
     app.set('view_path',__dirname+config.view_path)
-    var vp=app.get('view_path')
-    console.log(app.get('views'))
-
-    //app.set('views', [app.get('views'), path.join(__dirname+'/../views')]);
-
-
-
-    console.log(app.get('views'))
-
+    var vp=app.get('view_path') 
+ 
     app.engine('hbs',exphbs({
         extname: 'hbs', 
         defaultLayout: vp+'/layouts/index.hbs'
     }))
     
     app.set('view engine', 'handlebars');
-    
-    
+     
+    app.use(express.static(path.join(__dirname, '../../public'))); 
+
     app.use('/'+config.path_prefix , router);
      
     router.all('/', function(req,res)
@@ -33,6 +27,7 @@ module.exports=(app,express)=>{
     });
 
     router.all('/home',pc.home)
+    router.all('/init',pc.init)
 
 
  
