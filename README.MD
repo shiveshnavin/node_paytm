@@ -55,3 +55,13 @@ app.set('np_config', {
 require('node_paytm_pg')(app,express)
 
 ```
+
+![Alt text](public/start "Start")
+
+![Alt text](public/start2 "Start")
+
+![Alt text](public/pay "Start")
+
+![Alt text](public/status "Start")
+
+ 

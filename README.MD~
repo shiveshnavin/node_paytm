@@ -21,7 +21,7 @@ In your main nodejs file set paytm configuration in express app
 Change :
 
 host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing
+view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
 paytm_url : For Test "https://securegw-stage.paytm.in" and for Production "https://securegw.paytm.in"
 MID : Your Paytm Merchant ID
 Website : "WEBSTAGING" for Test and for Production , the website you entered while activation
@@ -55,3 +55,15 @@ app.set('np_config', {
 require('node_paytm_pg')(app,express)
 
 ```
+
+![Alt text](public/start "Title")
+
+
+![Alt text](relative/path/to/img.jpg?raw=true "Title")
+
+
+![Alt text](relative/path/to/img.jpg?raw=true "Title")
+
+
+![Alt text](relative/path/to/img.jpg?raw=true "Title")
+
