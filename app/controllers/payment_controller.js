@@ -118,7 +118,7 @@ exports.init=(req,res)=>{
                             params['ORDER_ID']			= txnData.orderId;
                             params['CUST_ID'] 			= txnData.cusId;
                             params['TXN_AMOUNT']			= JSON.stringify(txnData.amount);
-                            params['CALLBACK_URL']		= config.host_url+":"+config.port+'/'+config.path_prefix+'/callback' 
+                            params['CALLBACK_URL']		= config.host_url+'/'+config.path_prefix+'/callback' 
                             params['EMAIL']				= txnData.email;
                             params['MOBILE_NO']			= txnData.phone;
                              
