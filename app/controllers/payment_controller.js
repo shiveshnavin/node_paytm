@@ -242,7 +242,7 @@ exports.callback=(req,res)=>{
     var result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
     //console.log("Checksum Result => ", result, "\n");
     console.log("Transaction => ", req.body.ORDERID, req.body.RESPCODE);
-    console.log(req.body)
+    //console.log(req.body)
     if(result===true)
     {
 
