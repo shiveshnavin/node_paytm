@@ -2,11 +2,13 @@
 
         <form action="{{action}}" method="POST">
           <ul class="form-list">
+  {{#if check}} 
+
             <li class="form-list__row">
               <label>Name</label>
               <input type="text" name="NAME" required=""  value="{{NAME}}" {{readonly}}/>
             </li> 
-            
+  {{/if}}         
             <li class="form-list__row">
               <label>E-Mail</label>
               <input type="text" name="EMAIL" required=""  value="{{EMAIL}}" {{readonly}}/>

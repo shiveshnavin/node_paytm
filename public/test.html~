@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <title>Merchant Checkout Page</title>
+    </head>
+    <body>
+        <center>
+            <h1>Please do not refresh this page...</h1>
+        </center>
+        <form method="post" action="https://securegw-stage.paytm.in/theia/processTransaction" name="f1">
+            <input type='hidden' name="MID" value="hLhnoB95547314388857" >
+            <input type='hidden' name='WEBSITE' value='WEBSTAGING' >
+            <input type='hidden' name='CHANNEL_ID' value='WEB' >
+            <input type='hidden' name='INDUSTRY_TYPE_ID' value='Retail' >
+            <input type='hidden' name='ORDER_ID' value='TEST_1553329704394' >
+            <input type='hidden' name='CUST_ID' value='Customer001' >
+            <input type='hidden' name='TXN_AMOUNT' value='1.00' >
+            <input type='hidden' name='CALLBACK_URL' value='http://localhost:8080/callback' >
+            <input type='hidden' name='EMAIL' value='abc@mailinator.com' >
+            <input type='hidden' name='MOBILE_NO' value='7777777777' >
+            <input type='hidden' name='CHECKSUMHASH' value='0r5cJsaATkKlwXXudTZw4HxV+FryGeXcrXWK7EDXBOl43U/HATeYtYTvpwwdq2hplXA6qnRgfrGDnLeKgtfENrZ5SB0uHyjOzOP7esQRpW0=' >
+        </form>
+        <script type="text/javascript">document.f1.submit();</script>
+    </body>
+</html>

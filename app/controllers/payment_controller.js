@@ -28,6 +28,10 @@ exports.home=(req,res)=>{
 
 exports.init=(req,res)=>{
  
+
+			
+
+ 
     let gotAllParams=true;
 
     if(req.body!==undefined)
@@ -107,43 +111,40 @@ exports.init=(req,res)=>{
 
                         txnTask.save().then(data => {
                              
+ 
 
-                            var params  ={  
-                                NAME:data.name,
-                                EMAIL:data.email,
-                                MOBILE_NO:data.phone, 
-                                TXN_AMOUNT:data.amount,
-                                MID:config.MID,
-                                WEBSITE:config.WEBSITE,
-                                ORDER_ID:data.orderId,
-                                CUST_ID:data.cusId,
-                                INDUSTRY_TYPE_ID:config.INDUSTRY_TYPE_ID,
-                                CHANNEL_ID:config.CHANNEL_ID, 
-                                CALLBACK_URL:'http://localhost:'+config.port+'/'+config.path_prefix+'/callback'  
-                                };
-            
-                    var result = Object.keys(params).map(function(key) {
-                                    return [Number(key), params[key]];
-                                  });
-                                  
-                    checksum_lib.genchecksum(result, config.KEY, function (err, checksum) {
+
+            var params 						= {};
+			params['MID'] 					= config.MID;
+			params['WEBSITE']				= config.WEBSITE;
+			params['CHANNEL_ID']			= config.CHANNEL_ID;
+			params['INDUSTRY_TYPE_ID']	= config.INDUSTRY_TYPE_ID;
+			params['ORDER_ID']			= data.orderId;
+			params['CUST_ID'] 			= data.cusId;
+			params['TXN_AMOUNT']			= JSON.stringify(data.amount);
+			params['CALLBACK_URL']		= 'http://localhost:'+config.port+'/'+config.path_prefix+'/callback' 
+			params['EMAIL']				= data.email;
+			params['MOBILE_NO']			= data.phone;
+            params['NAME']			= data.name;  
+ 
+                    checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
                             res.render(vp+"init.hbs",{
 
-                                action:'http://localhost:'+config.port+'/'+config.path_prefix+'/callback',
+                                action:txn_url,
                                 readonly:'readonly',
                                 BUTTON:'Pay',
-                                NAME:params.NAME,
-                                EMAIL:params.EMAIL,
-                                MOBILE_NO:params.MOBILE_NO,
-                                PRODUCT_NAME:params.PRODUCT_NAME,
-                                TXN_AMOUNT:params.TXN_AMOUNT,
-                                MID:params.MID,
-                                WEBSITE:params.WEBSITE,
-                                ORDER_ID:params.ORDER_ID,
-                                CUST_ID:params.CUST_ID,
-                                INDUSTRY_TYPE_ID:params.INDUSTRY_TYPE_ID,
-                                CHANNEL_ID:params.CHANNEL_ID, 
-                                CALLBACK_URL:params.CALLBACK_URL,
+                                NAME:params['NAME'],
+                                EMAIL:params['EMAIL'],
+                                MOBILE_NO:params['MOBILE_NO'],
+                                PRODUCT_NAME:params['PRODUCT_NAME'],
+                                TXN_AMOUNT:params['TXN_AMOUNT'],
+                                MID:params['MID'],
+                                WEBSITE:params['WEBSITE'],
+                                ORDER_ID:params['ORDER_ID'],
+                                CUST_ID:params['CUST_ID'],
+                                INDUSTRY_TYPE_ID:params['INDUSTRY_TYPE_ID'],
+                                CHANNEL_ID:params['CHANNEL_ID'], 
+                                CALLBACK_URL:params['CALLBACK_URL'],
                                 CHECKSUMHASH:checksum 
                             })
 
@@ -152,6 +153,7 @@ exports.init=(req,res)=>{
                         }).catch(err => {
                            
                             console.log(err)
+
                             res.redirect('')
 
 
