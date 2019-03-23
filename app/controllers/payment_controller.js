@@ -110,7 +110,7 @@ module.exports = function (app) {
                                     let onTxn=txnData => {
                                         
             
-
+                                        console.log(txnData)
 
                                         var params 						= {};
                                         params['MID'] 					= config.MID;
@@ -330,7 +330,7 @@ module.exports = function (app) {
 
             module.status=(req,res)=>{
 
-                var myquery = { orderId: req.body.ORDERID };
+                var myquery = { orderId: req.body.ORDER_ID };
                 Transaction.findOne(myquery,function(err,objForUpdate){
 
 
