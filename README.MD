@@ -66,7 +66,7 @@ require('node-paytmpg')(app,express)
 simply open page /_pay/init in browser
 ```
 Method 2 : Post these params to /_pay/init using browser form
-
+```
 NAME
 EMAIL
 MOBILE_NO
