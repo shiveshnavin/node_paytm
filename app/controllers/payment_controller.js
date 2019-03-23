@@ -5,6 +5,7 @@ var packageInfo=require('../../package.json')
 var useController=require('./np_user.controller.js');
 var Transaction=require('../models/np_transaction.model.js');
 const checksum_lib = require('./checksum/checksum.js'); 
+var request=require('request')
 
 function makeid(length) {
     var text = "";
@@ -54,10 +55,13 @@ exports.init=(req,res)=>{
         gotAllParams=false;
     }
     
-    //console.log(req.body)
-
-    if(req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2)
+   // console.log(req.body) 
+    
+    if((req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2)
+    &&
+    (req.body.CUST_ID!==undefined && req.body.CUST_ID.length>2))
     {
+      //  console.log('redirect')
        // console.log(req.body)
         var params 						= {};
         params['MID'] 					= req.body.MID;
@@ -73,9 +77,9 @@ exports.init=(req,res)=>{
 
         checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
 
-            var txn_url = "https://securegw-stage.paytm.in/theia/processTransaction"; // for staging
-            // var txn_url = "https://securegw.paytm.in/theia/processTransaction"; // for production
-           // console.log(checksum)
+            var txn_url = config.paytm_url+"/theia/processTransaction"; // for staging
+         
+            // console.log(checksum)
             var form_fields = "";
             for(var x in params){
                 form_fields += "<input type='hidden' name='"+x+"' value='"+params[x]+"' >";
@@ -87,32 +91,7 @@ exports.init=(req,res)=>{
             res.end();
         });
     }
-    else if(!gotAllParams)
-        {
-
-            res.render(vp+"init.hbs",{
-
-                action:'',
-                readonly:'',
-                check:true,
-                BUTTON:'Submit',
-                NAME:(req.body.NAME===undefined?'':req.body.NAME),
-                EMAIL:(req.body.EMAIL===undefined?'':req.body.EMAIL),
-                MOBILE_NO:(req.body.MOBILE_NO===undefined?'':req.body.MOBILE_NO),
-                PRODUCT_NAME:(req.body.PRODUCT_NAME===undefined?'':req.body.PRODUCT_NAME),
-                TXN_AMOUNT:(req.body.TXN_AMOUNT===undefined?'':req.body.TXN_AMOUNT),
-                MID:config.MID,
-                WEBSITE:config.WEBSITE,
-                ORDER_ID:'',
-                CUST_ID:'',
-                INDUSTRY_TYPE_ID:config.INDUSTRY_TYPE_ID,
-                CHANNEL_ID:config.CHANNEL_ID, 
-                CALLBACK_URL:config.CALLBACK_URL,
-                CHECKSUMHASH:'' 
-
-            })
-        }
-        else{
+    else if((req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2) || gotAllParams)   {
 
 
             useController.create({name:req.body.NAME,email:req.body.EMAIL,phone:req.body.MOBILE_NO},
@@ -125,73 +104,98 @@ exports.init=(req,res)=>{
                         var txn_url = "https://securegw-stage.paytm.in/theia/processTransaction";
                         // var txn_url = "https://securegw.paytm.in/theia/processTransaction"; 
                         
-                        var txnTask=new Transaction({
 
-                                orderId:makeid(6),
-                                cusId:user.id,
-                                time:Date.now(),
-                                status:'INITIATED',
-                                name:user.name,
-                                email:user.email,
-                                phone:user.phone,
-                                amount:req.body.TXN_AMOUNT,
-                                pname:req.body.PRODUCT_NAME,
-                                extra:''
-
-                        });
-
-                        txnTask.save().then(data => {
+                        let onTxn=txnData => {
                              
  
 
 
-            var params 						= {};
-			params['MID'] 					= config.MID;
-			params['WEBSITE']				= config.WEBSITE;
-			params['CHANNEL_ID']			= config.CHANNEL_ID;
-			params['INDUSTRY_TYPE_ID']	= config.INDUSTRY_TYPE_ID;
-			params['ORDER_ID']			= data.orderId;
-			params['CUST_ID'] 			= data.cusId;
-			params['TXN_AMOUNT']			= JSON.stringify(data.amount);
-			params['CALLBACK_URL']		= 'http://localhost:'+config.port+'/'+config.path_prefix+'/callback' 
-			params['EMAIL']				= data.email;
-            params['MOBILE_NO']			= data.phone;
-             
+                            var params 						= {};
+                            params['MID'] 					= config.MID;
+                            params['WEBSITE']				= config.WEBSITE;
+                            params['CHANNEL_ID']			= config.CHANNEL_ID;
+                            params['INDUSTRY_TYPE_ID']	= config.INDUSTRY_TYPE_ID;
+                            params['ORDER_ID']			= txnData.orderId;
+                            params['CUST_ID'] 			= txnData.cusId;
+                            params['TXN_AMOUNT']			= JSON.stringify(txnData.amount);
+                            params['CALLBACK_URL']		= config.host_url+":"+config.port+'/'+config.path_prefix+'/callback' 
+                            params['EMAIL']				= txnData.email;
+                            params['MOBILE_NO']			= txnData.phone;
+                             
+                
+                
+                
+                                    checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+                                            res.render(vp+"init.hbs",{
+                
+                                                action:'',
+                                                readonly:'readonly',
+                                                BUTTON:'Pay',
+                                                NAME:params['NAME'],
+                                                EMAIL:params['EMAIL'],
+                                                MOBILE_NO:params['MOBILE_NO'],
+                                                PRODUCT_NAME:params['PRODUCT_NAME'],
+                                                TXN_AMOUNT:params['TXN_AMOUNT'],
+                                                MID:params['MID'],
+                                                WEBSITE:params['WEBSITE'],
+                                                ORDER_ID:params['ORDER_ID'],
+                                                CUST_ID:params['CUST_ID'],
+                                                INDUSTRY_TYPE_ID:params['INDUSTRY_TYPE_ID'],
+                                                CHANNEL_ID:params['CHANNEL_ID'], 
+                                                CALLBACK_URL:params['CALLBACK_URL'],
+                                                CHECKSUMHASH:checksum 
+                                            })
+                
+                                        });
+                
+                            };
 
 
 
-                    checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
-                            res.render(vp+"init.hbs",{
+                        if((req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2))
+                        {
 
-                                action:'',
-                                readonly:'readonly',
-                                BUTTON:'Pay',
-                                NAME:params['NAME'],
-                                EMAIL:params['EMAIL'],
-                                MOBILE_NO:params['MOBILE_NO'],
-                                PRODUCT_NAME:params['PRODUCT_NAME'],
-                                TXN_AMOUNT:params['TXN_AMOUNT'],
-                                MID:params['MID'],
-                                WEBSITE:params['WEBSITE'],
-                                ORDER_ID:params['ORDER_ID'],
-                                CUST_ID:params['CUST_ID'],
-                                INDUSTRY_TYPE_ID:params['INDUSTRY_TYPE_ID'],
-                                CHANNEL_ID:params['CHANNEL_ID'], 
-                                CALLBACK_URL:params['CALLBACK_URL'],
-                                CHECKSUMHASH:checksum 
-                            })
+                                                
+                        var myquery = { orderId: req.body.ORDER_ID };
+                        Transaction.findOne(myquery,function(err,objForUpdate){
+
+                            onTxn(objForUpdate); 
 
                         });
 
-                        }).catch(err => {
-                           
-                            console.log(err)
-
-                            res.redirect('')
 
 
-                        });
+                        }
+                        else
+                        {
+                        
+                                var txnTask=new Transaction({
 
+                                        orderId:makeid(6),
+                                        cusId:user.id,
+                                        time:Date.now(),
+                                        status:'INITIATED',
+                                        name:user.name,
+                                        email:user.email,
+                                        phone:user.phone,
+                                        amount:req.body.TXN_AMOUNT,
+                                        pname:req.body.PRODUCT_NAME,
+                                        extra:''
+
+                                });
+
+
+                                txnTask.save().then(onTxn) 
+                                .catch(err => {
+                            
+                                console.log(err)
+
+                                res.redirect('')
+                                });
+                        
+                        }
+                       
+ 
                        
                          
             
@@ -199,6 +203,33 @@ exports.init=(req,res)=>{
                 });
                     
                    
+        }
+        else
+        {
+            
+
+                res.render(vp+"init.hbs",{
+    
+                    action:'',
+                    readonly:'',
+                    check:true,
+                    BUTTON:'Submit',
+                    NAME:(req.body.NAME===undefined?'':req.body.NAME),
+                    EMAIL:(req.body.EMAIL===undefined?'':req.body.EMAIL),
+                    MOBILE_NO:(req.body.MOBILE_NO===undefined?'':req.body.MOBILE_NO),
+                    PRODUCT_NAME:(req.body.PRODUCT_NAME===undefined?'':req.body.PRODUCT_NAME),
+                    TXN_AMOUNT:(req.body.TXN_AMOUNT===undefined?'':req.body.TXN_AMOUNT),
+                    MID:config.MID,
+                    WEBSITE:config.WEBSITE,
+                    ORDER_ID:'',
+                    CUST_ID:'',
+                    INDUSTRY_TYPE_ID:config.INDUSTRY_TYPE_ID,
+                    CHANNEL_ID:config.CHANNEL_ID, 
+                    CALLBACK_URL:config.CALLBACK_URL,
+                    CHECKSUMHASH:'' 
+    
+                })
+            
         }
  
 }
@@ -209,8 +240,9 @@ exports.callback=(req,res)=>{
 
     var checksumhash = req.body.CHECKSUMHASH; 
     var result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
-    console.log("Checksum Result => ", result, "\n");
-
+    //console.log("Checksum Result => ", result, "\n");
+    console.log("Transaction => ", req.body.ORDERID, req.body.RESPCODE);
+    console.log(req.body)
     if(result===true)
     {
 
@@ -224,7 +256,7 @@ exports.callback=(req,res)=>{
                 return;
             }
             objForUpdate.status = req.body.STATUS;  
-            objForUpdate.extra = req.body;  
+            objForUpdate.extra = JSON.stringify(req.body);  
         
                 var newvalues = { $set: objForUpdate };  
                 Transaction.updateOne(myquery, newvalues, function(err, saveRes) {
@@ -235,7 +267,7 @@ exports.callback=(req,res)=>{
                     }
                     else{
                         objForUpdate.readonly="readonly"
-                        objForUpdate.action='/'+config.path_prefix+'/home'
+                        objForUpdate.action=config.homepage
                     res.render(vp+"result.hbs",objForUpdate);
                 }
                 });
@@ -251,8 +283,121 @@ exports.callback=(req,res)=>{
  
 }
 
+exports.createTxn=(req,res)=>{
+
+
+    useController.create({name:req.body.NAME,email:req.body.EMAIL,phone:req.body.MOBILE_NO},
+        function(user)
+        { 
+ 
+                
+                        var txnTask=new Transaction({
+
+                                orderId:makeid(6),
+                                cusId:user.id,
+                                time:Date.now(),
+                                status:'INITIATED',
+                                name:user.name,
+                                email:user.email,
+                                phone:user.phone,
+                                amount:req.body.TXN_AMOUNT,
+                                pname:req.body.PRODUCT_NAME,
+                                extra:''
+
+                        });
+
+
+                        txnTask.save().then(function(txn)
+                        {
+                            res.send(txn)
+                        }) 
+                        .catch(err => {
+                    
+                             console.log(err)
+
+                        res.redirect('')
+                        });
+             
+
+        });
+
+
+
+};
+
 
 exports.status=(req,res)=>{
 
+    var myquery = { orderId: req.body.ORDERID };
+    Transaction.findOne(myquery,function(err,objForUpdate){
+
+
+        if(err)
+        {
+            res.send(err)
+            return
+        }
+        if(objForUpdate.status==="INITIATED")
+        {
+
+            var params={}
+            params["MID"]=config.MID;
+            params["ORDERID"]=req.body.ORDERID;
+            
+ 
+            checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+        
+            request.post(
+                config.paytm_url+"/order/status",
+                { json: { MID: config.MID, ORDERID: req.body.ORDERID, CHECKSUMHASH: checksum, } },
+                function (error, response, body) {
+ 
+                    if (!error && response.statusCode == 200) {
+                        console.log(body);
+
+                        var stat=JSON.parse(JSON.stringify(body))
+                        if(stat.TXNID.length>4)
+                        {
+                            objForUpdate.status = stat.STATUS;  
+                            objForUpdate.extra = JSON.stringify(stat);  
+                        
+                                var newvalues = { $set: objForUpdate };  
+                                Transaction.updateOne(myquery, newvalues, function(err, saveRes) {
+                        
+                                    if (err)
+                                    {
+                                        res.send({message:"Error Occured !",ORDERID:stat.ORDERID,TXNID:stat.TXNID})
+                                    }
+                                    else{
+                                        
+                                        res.send(saveRes)
+                                    }
+                                });
+                        }
+                        else
+                        {
+                            res.send(objForUpdate)
+
+                        }
+                        
+
+
+                    }
+                    else
+                    {
+                        console.log('ERROR:::',error,'\n',response);
+                    }
+                }
+            );
+        });
+        }
+        else
+        {
+            res.send(objForUpdate);
+        }
+
+
+    });
+   
 
 }
