@@ -112,6 +112,6 @@ Create an Order by posting to URL /_pay/init
 
 ![Alt text](public/pay.png "Start")
 
-![Alt text](public/status.png "Start")
+![Alt text](public/stat.png "Start")
 
  
