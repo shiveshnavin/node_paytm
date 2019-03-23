@@ -2,7 +2,7 @@
 
 Does all the hardwork for you while integrating paytm with nodejs server. 
 
-#### Requirments
+### Requirments
 
 1. MongoDB
 2. Your Paytm Credentials 
@@ -11,7 +11,7 @@ Does all the hardwork for you while integrating paytm with nodejs server.
 You can get your paytm credentials here
 https://developer.paytm.com/docs
 
-#### Install
+### Install
 
 ```code
 npm install node_paytm_pg
@@ -54,27 +54,29 @@ app.set('np_config', {
 
 });
 
-require('node_paytm_pg')(app,express)
+require('node-paytm-pg')(app,express)
 
 ```
 
-#### Using 
+### Usage 
+ 
 
-Pages
+#### Method 1 : Ask user to enter Details
 ```
-Method 1 : Ask user to enter Details
-
-simple open page /_pay/init in browser
-
-Method 2 : Post these params to /_pay/init using form
+simply open page /_pay/init in browser
+```
+Method 2 : Post these params to /_pay/init using browser form
 
 NAME
 EMAIL
 MOBILE_NO
 PRODUCT_NAME
 TXN_AMOUNT
+```
 
-Method 3 : Using API . Useful for Integrating on Mobile App
+####  Method 3 : Using API . Useful for Integrating on Mobile App
+```
+Create an Order by posting to URL /_pay/api/createTxn
 
 NAME
 EMAIL
@@ -83,7 +85,7 @@ PRODUCT_NAME
 TXN_AMOUNT
 
 This will generate an orderId in response . 
-Now Post to  /_pay/init  using form
+Now Post to  /_pay/init using browser form
 
 NAME
 EMAIL
@@ -96,14 +98,13 @@ APIS
 For Checking Status
 
 method : POST
-path : /_pay/status
+path : /_pay/api/status
 Params:
 ORDER_ID
 
 ```
 
 
-Create an Order by posting to URL /_pay/init
 
 
 ![Alt text](public/start.png "Start")
