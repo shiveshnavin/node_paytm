@@ -14,7 +14,7 @@ https://developer.paytm.com/docs
 ### Install
 
 ```code
-npm install node_paytm_pg
+npm install node-paytmpg --save
 ```
 
 In your main nodejs file set paytm configuration in express app
@@ -54,7 +54,7 @@ app.set('np_config', {
 
 });
 
-require('node-paytm-pg')(app,express)
+require('node-paytmpg')(app,express)
 
 ```
 
