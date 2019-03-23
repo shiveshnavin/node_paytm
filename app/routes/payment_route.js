@@ -30,6 +30,7 @@ module.exports=(app,express)=>{
     router.all('/home',pc.home)
     router.all('/init',pc.init)
     router.all('/callback',pc.callback)
+    router.all('/api/status',pc.status)
 
 
  

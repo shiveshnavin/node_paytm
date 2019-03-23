@@ -1,0 +1,50 @@
+  <h2>Payment Status</h2>
+
+        <form action="{{action}}" method="POST">
+          <ul class="form-list">
+ 
+
+            <li class="form-list__row">
+              <label>Order ID</label>
+              <input type="text" name="NAME" required=""  value="{{orderId}}" {{readonly}}/>
+            </li> 
+
+            <li class="form-list__row">
+              <label>Status</label>
+              <input type="text" name="NAME" required=""  value="{{status}}" {{readonly}}/>
+            </li> 
+         
+            <li class="form-list__row">
+              <label>E-Mail</label>
+              <input type="text" name="EMAIL" required=""  value="{{email}}" {{readonly}}/>
+            </li> 
+              
+            <li class="form-list__row">
+              <label>Phone</label>
+              <input type="text" name="MOBILE_NO" required="" value="{{phone}}" {{readonly}}/>
+            </li> 
+           
+ 
+            <li class="form-list__row form-list__row--inline">
+  
+               <div>
+                <label> 
+                    Amount
+                </label>
+                 <input type="text" name="TXN_AMOUNT" required="" value="{{amount}}" {{readonly}} />
+              </div>
+
+            </li>
+ 
+ 
+  
+            <li>
+              <button type="submit" class="button">DONE</button>
+            </li>
+          </ul>
+
+ 
+ 
+
+
+        </form>

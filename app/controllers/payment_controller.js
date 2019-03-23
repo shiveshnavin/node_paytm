@@ -20,7 +20,7 @@ var vp=__dirname+config.view_path
 
 exports.home=(req,res)=>{
 
-
+    packageInfo.repository.url=packageInfo.repository.url.replace('git+','')
     res.render(vp+"home.hbs",packageInfo)
 
 
@@ -56,7 +56,38 @@ exports.init=(req,res)=>{
     
     //console.log(req.body)
 
-        if(!gotAllParams)
+    if(req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2)
+    {
+       // console.log(req.body)
+        var params 						= {};
+        params['MID'] 					= req.body.MID;
+        params['WEBSITE']				= req.body.WEBSITE;
+        params['CHANNEL_ID']			=  req.body.CHANNEL_ID;
+        params['INDUSTRY_TYPE_ID']	=  req.body.INDUSTRY_TYPE_ID;
+        params['ORDER_ID']			= req.body.ORDER_ID;
+        params['CUST_ID'] 			= req.body.CUST_ID;
+        params['TXN_AMOUNT']			= req.body.TXN_AMOUNT;
+        params['CALLBACK_URL']		= req.body.CALLBACK_URL;
+        params['EMAIL']				= req.body.EMAIL;
+        params['MOBILE_NO']			= req.body.MOBILE_NO;
+
+        checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+
+            var txn_url = "https://securegw-stage.paytm.in/theia/processTransaction"; // for staging
+            // var txn_url = "https://securegw.paytm.in/theia/processTransaction"; // for production
+           // console.log(checksum)
+            var form_fields = "";
+            for(var x in params){
+                form_fields += "<input type='hidden' name='"+x+"' value='"+params[x]+"' >";
+            }
+            form_fields += "<input type='hidden' name='CHECKSUMHASH' value='"+checksum+"' >";
+
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1></center><form method="post" action="'+txn_url+'" name="f1">'+form_fields+'</form><script type="text/javascript">document.f1.submit();</script></body></html>');
+            res.end();
+        });
+    }
+    else if(!gotAllParams)
         {
 
             res.render(vp+"init.hbs",{
@@ -124,13 +155,15 @@ exports.init=(req,res)=>{
 			params['TXN_AMOUNT']			= JSON.stringify(data.amount);
 			params['CALLBACK_URL']		= 'http://localhost:'+config.port+'/'+config.path_prefix+'/callback' 
 			params['EMAIL']				= data.email;
-			params['MOBILE_NO']			= data.phone;
-            params['NAME']			= data.name;  
- 
+            params['MOBILE_NO']			= data.phone;
+             
+
+
+
                     checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
                             res.render(vp+"init.hbs",{
 
-                                action:txn_url,
+                                action:'',
                                 readonly:'readonly',
                                 BUTTON:'Pay',
                                 NAME:params['NAME'],
@@ -171,15 +204,55 @@ exports.init=(req,res)=>{
 }
 
 
-
 exports.callback=(req,res)=>{
 
 
-    console.log(req.body);
     var checksumhash = req.body.CHECKSUMHASH; 
     var result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
     console.log("Checksum Result => ", result, "\n");
 
-    res.send(req.body)
+    if(result===true)
+    {
+
+        var myquery = { orderId: req.body.ORDERID };
+        Transaction.findOne(myquery,function(err,objForUpdate)
+        {
+
+            if(err)
+            {
+                res.send({message:"Transaction Not Found !",ORDERID:req.body.ORDERID,TXNID:req.body.TXNID})
+                return;
+            }
+            objForUpdate.status = req.body.STATUS;  
+            objForUpdate.extra = req.body;  
+        
+                var newvalues = { $set: objForUpdate };  
+                Transaction.updateOne(myquery, newvalues, function(err, saveRes) {
+        
+                    if (err)
+                    {
+                        res.send({message:"Error Occured !",ORDERID:req.body.ORDERID,TXNID:req.body.TXNID})
+                    }
+                    else{
+                        objForUpdate.readonly="readonly"
+                        objForUpdate.action='/'+config.path_prefix+'/home'
+                    res.render(vp+"result.hbs",objForUpdate);
+                }
+                });
+        
+        }) 
+     
+    }
+    else{
+
+        res.send({message:"Invalid Checksum !",ORDERID:req.body.ORDERID,TXNID:req.body.TXNID})
+  
+    }
+ 
+}
+
+
+exports.status=(req,res)=>{
+
 
 }
