@@ -20,6 +20,7 @@ npm install node_paytm_pg
 In your main nodejs file set paytm configuration in express app
 Change :
 
+```code
 host_url : Host URL of your server . This will be used to redirect user after payment
 view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
 paytm_url : For Test "https://securegw-stage.paytm.in" and for Production "https://securegw.paytm.in"
@@ -32,6 +33,7 @@ homepage : Homepage of your website where user can go after payment confirmation
 path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
 db_url : Your MongoDB url
 
+```
 Place these 2 statements in your main nodejs file
 
 ```javascript

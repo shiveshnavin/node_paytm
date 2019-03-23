@@ -56,14 +56,12 @@ require('node_paytm_pg')(app,express)
 
 ```
 
-![Alt text](public/start "Title")
+![Alt text](public/start "Start")
 
+![Alt text](public/start2 "Start")
 
-![Alt text](relative/path/to/img.jpg?raw=true "Title")
+![Alt text](public/pay "Start")
 
+![Alt text](public/status "Start")
 
-![Alt text](relative/path/to/img.jpg?raw=true "Title")
-
-
-![Alt text](relative/path/to/img.jpg?raw=true "Title")
-
+ 
