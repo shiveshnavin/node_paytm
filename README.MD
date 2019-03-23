@@ -11,6 +11,17 @@ Does all the hardwork for you while integrating paytm with nodejs server.
 You can get your paytm credentials here
 https://developer.paytm.com/docs
 
+
+
+![Alt text](public/start.png "Start")
+
+![Alt text](public/start2.png "Start")
+
+![Alt text](public/pay.png "Start")
+
+![Alt text](public/stat.png "Start")
+ 
+
 ### Install
 
 ```code
@@ -65,7 +76,7 @@ require('node-paytmpg')(app,express)
 ```
 simply open page /_pay/init in browser
 ```
-Method 2 : Post these params to /_pay/init using browser form
+#### Method 2 : Post these params to /_pay/init using browser form
 ```
 NAME
 EMAIL
@@ -105,14 +116,3 @@ ORDER_ID
 ```
 
 
-
-
-![Alt text](public/start.png "Start")
-
-![Alt text](public/start2.png "Start")
-
-![Alt text](public/pay.png "Start")
-
-![Alt text](public/stat.png "Start")
-
- 
