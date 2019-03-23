@@ -1,5 +1,5 @@
 module.exports=(app,express)=>{
-
+    const bodyParser = require('body-parser');
     var exphbs=require('express-handlebars')
     var path=require('path')
     var packageInfo=require('../../package.json')
@@ -8,7 +8,7 @@ module.exports=(app,express)=>{
     var router=express.Router()
     app.set('view_path',__dirname+config.view_path)
     var vp=app.get('view_path') 
- 
+    
     app.engine('hbs',exphbs({
         extname: 'hbs', 
         defaultLayout: vp+'/layouts/index.hbs'
@@ -16,8 +16,9 @@ module.exports=(app,express)=>{
     
     app.set('view engine', 'handlebars');
      
-    app.use("/_pay",express.static(path.join(__dirname, '../../public'))); 
- 
+    app.use(bodyParser.urlencoded({ extended: true })) 
+    app.use(bodyParser.json())
+    app.use("/"+config.path_prefix,express.static(path.join(__dirname, '../../public')));  
     app.use('/'+config.path_prefix , router);
      
     router.all('/', function(req,res)
@@ -28,6 +29,7 @@ module.exports=(app,express)=>{
 
     router.all('/home',pc.home)
     router.all('/init',pc.init)
+    router.all('/callback',pc.callback)
 
 
  
