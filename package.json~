@@ -4,7 +4,7 @@
   "description": "Paytm Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
-    "test": "node example.js"
+    "test": "node index.js"
   },
   "repository": {
     "type": "git",
