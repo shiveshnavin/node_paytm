@@ -17,7 +17,7 @@ app.set('np_config', {
 
 });
 
-require('./app/routes/payment_route.js')(app,express)
+require('node-paytmpg')(app,express)
 
 app.all('/',function(req,res)
 {

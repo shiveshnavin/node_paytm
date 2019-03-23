@@ -2,6 +2,11 @@
 
 Does all the hardwork for you while integrating paytm with nodejs server. 
 
+## Example 
+
+Demo : https://node-paytm.herokuapp.com/_pay/init
+Git : https://github.com/shiveshnavin/payment-gateway-example
+
 ### Requirments
 
 1. MongoDB
