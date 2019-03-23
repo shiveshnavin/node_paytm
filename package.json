@@ -1,6 +1,6 @@
 {
   "name": "node_paytm_pg",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Paytm Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
