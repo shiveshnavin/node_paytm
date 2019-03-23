@@ -353,7 +353,7 @@ exports.status=(req,res)=>{
                 function (error, response, body) {
  
                     if (!error && response.statusCode == 200) {
-                        console.log(body);
+                       // console.log(body);
 
                         var stat=JSON.parse(JSON.stringify(body))
                         if(stat.TXNID.length>4)
