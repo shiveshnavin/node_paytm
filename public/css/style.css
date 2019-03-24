@@ -202,7 +202,7 @@ overflow-y: auto;
     box-shadow: 3px 3px 20px rgba(0, 0, 0, 0.1); }
   .modal__featured {
     position: relative;
-    -ms-flex: 1;
+    -ms-flex: 1; 
         -webkit-box-flex: 1;
             flex: 1;
     min-width: 130px;
