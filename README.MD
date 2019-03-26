@@ -74,7 +74,7 @@ require('node-paytmpg')(app,express)
 
 ```
 
-### Usage 
+### Basic Usage 
  
 
 #### Method 1 : Ask user to enter Details
@@ -119,6 +119,39 @@ Params:
 ORDERID
 
 ```
+
+### Advanced  
+
+You can use callbacks to sync node-paytmpg transactions with you own database using .
+
+```
+var PayTMPG=require('node-paytmpg')(app,express,{
+
+    onStart:function(orderid,data)
+    {
+        console.log("Payment has started \n",orderid,data)
+    },
+    onFinish:function(orderid,data)
+    {
+        console.log("Payment Has finished \n",orderid,data)
+
+    }
+
+})
+
+var Transaction=PayTMPG.Transaction;
+var User=PayTMPG.User;
+
+ Transaction.findOne({orderId:req.body.ORDERID},function(err,data){
+
+	console.log(data)	
+
+  })
+
+
+```
+
+
 
 License : GPL
 
