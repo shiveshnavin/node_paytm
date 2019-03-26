@@ -1,11 +1,11 @@
-module.exports=(app,express)=>{
+module.exports=(app,express,callbacks)=>{
     const bodyParser = require('body-parser');
     const mongoose = require('mongoose');
     var exphbs=require('express-handlebars')
     var path=require('path')
     var packageInfo=require('../../package.json')
     var config= (app.get('np_config'))
-    var pc=require('../controllers/payment_controller.js')(app)
+    var pc=require('../controllers/payment_controller.js')(app,callbacks)
     var router=express.Router()
     app.set('view_path',__dirname+config.view_path)
     var vp=app.get('view_path')  

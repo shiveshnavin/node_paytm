@@ -4,7 +4,7 @@ var Transaction=require('../models/np_transaction.model.js');
 const checksum_lib = require('./checksum/checksum.js'); 
 var request=require('request')
 
-module.exports = function (app) {
+module.exports = function (app,callbacks) {
 
     var module = {};
 
@@ -92,6 +92,9 @@ module.exports = function (app) {
                         res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1></center><form method="post" action="'+txn_url+'" name="f1">'+form_fields+'</form><script type="text/javascript">document.f1.submit();</script></body></html>');
                         res.end();
                     });
+
+                    if(callbacks!==undefined)
+                     callbacks.onStart(params['ORDER_ID'],params);
                 }
                 else if((req.body.ORDER_ID!==undefined && req.body.ORDER_ID.length>2) || gotAllParams)   {
 
@@ -245,6 +248,9 @@ module.exports = function (app) {
                 //console.log("Checksum Result => ", result, "\n");
                 console.log("Transaction => ", req.body.ORDERID, req.body.RESPCODE);
                 //console.log(req.body)
+
+                if(callbacks!==undefined)
+                    callbacks.onFinish(req.body.ORDERID,req.body);
                 if(result===true)
                 {
 
@@ -304,7 +310,7 @@ module.exports = function (app) {
                                             phone:user.phone,
                                             amount:req.body.TXN_AMOUNT,
                                             pname:req.body.PRODUCT_NAME,
-                                            extra:''
+                                            extra:JSON.stringify(req.body.EXTRA)
 
                                     });
 
