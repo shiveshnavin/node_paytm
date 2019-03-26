@@ -116,7 +116,7 @@ For Checking Status
 method : POST
 path : /_pay/api/status
 Params:
-ORDERID
+ORDER_ID
 
 ```
 

@@ -116,7 +116,7 @@ For Checking Status
 method : POST
 path : /_pay/api/status
 Params:
-ORDERID
+ORDER_ID
 
 ```
 
@@ -142,7 +142,7 @@ var PayTMPG=require('node-paytmpg')(app,express,{
 var Transaction=PayTMPG.Transaction;
 var User=PayTMPG.User;
 
- Transaction.findOne({orderid:req.body.ORDERID},function(err,data){
+ Transaction.findOne({orderId:req.body.ORDERID},function(err,data){
 
 	console.log(data)	
 

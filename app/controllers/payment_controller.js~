@@ -310,7 +310,7 @@ module.exports = function (app,callbacks) {
                                             phone:user.phone,
                                             amount:req.body.TXN_AMOUNT,
                                             pname:req.body.PRODUCT_NAME,
-                                            extra:JSON.stringify(req.body.EXTRA)
+                                            extra:(req.body.EXTRA)
 
                                     });
 

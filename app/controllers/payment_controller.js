@@ -350,14 +350,14 @@ module.exports = function (app,callbacks) {
 
                         var params={}
                         params["MID"]=config.MID;
-                        params["ORDERID"]=req.body.ORDERID;
+                        params["ORDERID"]=req.body.ORDER_ID;
                         
             
                         checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
                     
                         request.post(
                             config.paytm_url+"/order/status",
-                            { json: { MID: config.MID, ORDERID: req.body.ORDERID, CHECKSUMHASH: checksum, } },
+                            { json: { MID: config.MID, ORDERID: req.body.ORDER_ID, CHECKSUMHASH: checksum, } },
                             function (error, response, body) {
             
                                 if (!error && response.statusCode == 200) {
