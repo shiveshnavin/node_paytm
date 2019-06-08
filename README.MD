@@ -5,6 +5,11 @@ Does all the hardwork for you while integrating paytm with nodejs server.
 ## Example 
 
 Demo : https://node-paytm.herokuapp.com/_pay/init
+
+Use any Card Details or Net Banking 
+username : test
+password : test
+
 Git : https://github.com/shiveshnavin/payment-gateway-example
 
 ### Requirments
