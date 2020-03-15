@@ -71,7 +71,8 @@ app.set('np_config', {
     "INDUSTRY_TYPE_ID":"Retail",
     "homepage":"/_pay/home",
     "path_prefix":"_pay",
-    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123"
+    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123",
+    "id_length":6
 
 });
 

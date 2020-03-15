@@ -176,7 +176,7 @@ module.exports = function (app,callbacks) {
                                     
                                             var txnTask=new Transaction({
 
-                                                    orderId:makeid(6),
+                                                    orderId:makeid(config.id_length || 6),
                                                     cusId:user.id,
                                                     time:Date.now(),
                                                     status:'INITIATED',
@@ -301,7 +301,7 @@ module.exports = function (app,callbacks) {
                             
                                     var txnTask=new Transaction({
 
-                                            orderId:makeid(6),
+                                            orderId:makeid(config.id_length  || 6),
                                             cusId:user.id,
                                             time:Date.now(),
                                             status:'INITIATED',
