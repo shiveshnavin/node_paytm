@@ -16,6 +16,12 @@ app.set('np_config', {
     "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123"
 
 });
+if(process.env.CONFIG){
+
+    app.set('np_config', JSON.parse(process.env.CONFIG));
+    console.log('using config from env',process.env.CONFIG);
+    
+}
 
 require('node-paytmpg')(app,express)
 
