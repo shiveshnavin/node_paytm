@@ -3,18 +3,18 @@ var app=express()
 
 
 app.set('np_config', {
-    "host_url":"http://127.0.0.1:5542", 
+    "host_url":"https://my-host-url.server.com", 
     "view_path":"/../views/",
     "paytm_url":"https://securegw-stage.paytm.in",
-    "MID":"XXXXXXXXXXX",
+    "MID":"XXX",
     "WEBSITE":"WEBSTAGING",
-    "KEY":"XXXXXXXXXXX",
-    "CHANNEL_ID":"WEB", 
+    "KEY":"XXXX",
+    "CHANNEL_ID":"WAP", 
     "INDUSTRY_TYPE_ID":"Retail",
-    "homepage":"/_pay/home",
+    "homepage":"/",
     "path_prefix":"_pay",
-    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123"
-
+    "db_url":"mongodb://heroku_szpxpx4x:cati8533i869nd5uv6scq1e11v@ds113826.mlab.com:13826/heroku_szpxpx4x"
+ 
 });
 if(process.env.CONFIG){
 
