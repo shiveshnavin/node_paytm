@@ -18,7 +18,7 @@ module.exports = function (app, callbacks) {
   if (config.db_url) {
     User = require('../models/np_user.model.js');
   } else if (app.multidborm) {
-    User = require('../models/np_multidbplugin.js');
+    User = require('../models/np_multidbplugin.js')('npusers',app.multidborm);
     User.db=app.multidborm;
     User.modelname='npusers'
     app.NPUser = User;

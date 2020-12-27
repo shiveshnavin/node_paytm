@@ -19,7 +19,7 @@ module.exports = function (app, callbacks) {
     if (config.db_url) {
         Transaction = require('../models/np_transaction.model.js');
     } else if (app.multidborm) {
-        Transaction = require('../models/np_multidbplugin.js');
+        Transaction = require('../models/np_multidbplugin.js')('nptransactions',app.multidborm);
         Transaction.db = app.multidborm;
         Transaction.modelname = 'nptransactions'
         app.NPTransaction = Transaction;
