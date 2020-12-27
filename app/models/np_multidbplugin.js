@@ -9,6 +9,8 @@ class MultiDbMapper {
 
     static async sanitizeRequest(body) {
 
+        if (!body)
+            return;
         if (body.amount)
             body.amount = parseFloat(body.amount);
         if (body.TXN_AMOUNT)

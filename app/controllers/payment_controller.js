@@ -120,7 +120,7 @@ module.exports = function (app, callbacks) {
                     let onTxn = txnData => {
 
 
-                        console.log(txnData)
+                        //console.log(txnData)
 
                         var params = {};
                         params['MID'] = config.MID;
@@ -250,7 +250,7 @@ module.exports = function (app, callbacks) {
         var checksumhash = req.body.CHECKSUMHASH;
         var result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
         //console.log("Checksum Result => ", result, "\n");
-        console.log("Transaction => ", req.body.ORDERID, req.body.RESPCODE);
+        console.log("NodePayTMPG::Transaction => ", req.body.ORDERID, req.body.STATUS);
         //console.log(req.body)
 
         if (callbacks !== undefined)
