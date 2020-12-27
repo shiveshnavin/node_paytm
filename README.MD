@@ -14,7 +14,7 @@ Git : https://github.com/shiveshnavin/payment-gateway-example
 
 ### Requirments
 
-1. MongoDB
+1. MongoDB / Firestore / SQlite
 2. Your Paytm Credentials 
 3. Express . This only works with NodeJS express server
 
@@ -52,13 +52,26 @@ CHANNEL_ID : Know More at Paytm Docs
 INDUSTRY_TYPE_ID : Know More at Paytm Docs
 homepage : Homepage of your website where user can go after payment confirmation page
 path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
-db_url : Your MongoDB url
+db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
+id_length: Length of Order ID and User ID
 
 ```
+
 Place these 2 statements in your main nodejs file before calling app.listen(..)
 
 ```javascript
 
+/*** 
+ * Uncomment in case you want to use multidborm to support 
+ * MongoDB / Firestore / SQlite
+ * https://www.npmjs.com/package/multi-db-orm
+ * Refer to example.js
+
+ const { MultiDbORM, FireStoreDB, MongoDB, SQLiteDB, Sync } = require("multi-db-orm");
+var mongodb = new MongoDB(MONGOURL);
+app.multidborm = mongodb;
+
+*/
 
 app.set('np_config', {
     "host_url":"http://127.0.0.1:5542", 
@@ -71,8 +84,8 @@ app.set('np_config', {
     "INDUSTRY_TYPE_ID":"Retail",
     "homepage":"/_pay/home",
     "path_prefix":"_pay",
-    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123",
-    "id_length":6
+    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123", // Remove this property in case you want to use multidborm
+    "id_length":10
 
 });
 
