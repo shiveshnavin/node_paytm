@@ -4,7 +4,7 @@
   "description": "Paytm Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
-    "test": "node example.js"
+    "start": "node example.js"
   },
   "repository": {
     "type": "git",
@@ -32,8 +32,9 @@
     "express": "^4.16.4",
     "express-handlebars": "^3.0.2",
     "mongoose": "^5.4.16",
+    "multi-db-orm": "^1.0.2",
+    "node-paytmpg": "^1.2.1",
     "request": "^2.88.0",
-    "util": "^0.11.1",
-    "node-paytmpg":"^1.2.1"
+    "util": "^0.11.1"
   }
 }

@@ -1,62 +1,76 @@
-const User = require('../models/np_user.model.js'); 
-const Transaction = require('../models/np_transaction.model.js');
-
+var User ;
+var Transaction = require('../models/np_transaction.model.js');
+var IDLEN = 10 ;
 function makeid(length) {
-    var text = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  
-    for (var i = 0; i < length; i++)
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
-  
-    return text;
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < length; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
 }
 
-exports.create = (userData, cb) => { 
-     
-    User.findOne({email: userData.email}, function(err, user) {
-        if (user){
-           
-   // console.log("User Update : ",userData.name );
-                var myquery = { email: userData.email };
-                
-                var objForUpdate = user;
-  
-if (userData.email && userData.email.indexOf("@")!==-1 ) objForUpdate.email = userData.email;  
-if (userData.phone && userData.phone.length>2 ) objForUpdate.phone = userData.phone; 
-if (userData.name && userData.name.length>2 ) objForUpdate.name = userData.name;    
+module.exports = function (app, callbacks) {
+  var module = {};
+  var config = (app.get('np_config'))
 
-                    var newvalues = { $set: objForUpdate }; 
-                    //console.log("User Old : ",userData.name);
-                    User.updateOne(myquery, newvalues, function(err, saveRes) {
-                        if (err) cb({
-                            message: err.message || "Some error occurred while updating users."
-                        });
-        
-                       // console.log("Sendiing callback")
-                        cb(user);
-                      //  console.log("sent callback")
-                    });
-               
+  if (config.db_url) {
+    User = require('../models/np_user.model.js');
+  } else if (app.multidborm) {
+    User = require('../models/np_multidbplugin.js');
+    User.db=app.multidborm;
+    User.modelname='npusers'
+    app.NPUser = User;
+  }
+  module.create = (userData, cb) => {
 
-        }else{
-                    
-                  //  console.log("User New : ",userData.name);
+    User.findOne({ email: userData.email }, function (err, user) {
+      if (user) {
 
-                                userData.id=makeid(6);
-                                var userTask = new User(userData);
-                                userTask.save()
-                                .then(user => {
-                                  //  console.log("Sendiing callback")
-                                    cb(user);
-                                  //  console.log("sent callback")
+        // console.log("User Update : ",userData.name );
+        var myquery = { email: userData.email };
 
-                                }).catch(err => {
-                                    return cb(err);
-                                });
-                            
-             }
-                        
-            });
+        var objForUpdate = user;
 
-};
+        if (userData.email && userData.email.indexOf("@") !== -1) objForUpdate.email = userData.email;
+        if (userData.phone && userData.phone.length > 2) objForUpdate.phone = userData.phone;
+        if (userData.name && userData.name.length > 2) objForUpdate.name = userData.name;
+        delete objForUpdate._id ;
+        var newvalues = { $set: objForUpdate };
+        //console.log("User Old : ",userData.name);
+        User.updateOne(myquery, newvalues, function (err, saveRes) {
+          if (err) cb({
+            message: err.message || "Some error occurred while updating users."
+          });
 
+          // console.log("Sendiing callback")
+          cb(user);
+          //  console.log("sent callback")
+        });
+
+
+      } else {
+
+        //  console.log("User New : ",userData.name);
+
+        userData.id = makeid(IDLEN);
+        var userTask = new User(userData);
+        userTask.save()
+          .then(user => {
+            //  console.log("Sendiing callback")
+            cb(user);
+            //  console.log("sent callback")
+
+          }).catch(err => {
+            return cb(err);
+          });
+
+      }
+
+    },User);
+
+  };
+  return module;
+
+}

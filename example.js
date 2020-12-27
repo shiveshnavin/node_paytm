@@ -1,21 +1,32 @@
 var express=require('express')
 var app=express()
 
+var MONGOURL="mongodb+srv://username:pasws@host.net/dbname";
+
+/*** 
+ * Uncomment in case you want to use multidborm 
+ * https://www.npmjs.com/package/multi-db-orm
+
+ const { MultiDbORM, FireStoreDB, MongoDB, SQLiteDB, Sync } = require("multi-db-orm");
+var mongodb = new MongoDB(MONGOURL);
+app.multidborm = mongodb;
+
+*/
 
 app.set('np_config', {
-    "host_url":"https://my-host-url.server.com", 
+    "host_url":"http://127.0.0.1:5542", 
     "view_path":"/../views/",
     "paytm_url":"https://securegw-stage.paytm.in",
-    "MID":"XXX",
+    "MID":"XXXXX",
     "WEBSITE":"WEBSTAGING",
-    "KEY":"XXXX",
+    "KEY":"XXXXX",
     "CHANNEL_ID":"WAP", 
     "INDUSTRY_TYPE_ID":"Retail",
     "homepage":"/",
     "path_prefix":"_pay",
-    "db_url":"mongodb://heroku_szpxpx4x:cati8533i869nd5uv6scq1e11v@ds113826.mlab.com:13826/heroku_szpxpx4x"
- 
+    "db_url":MONGOURL // Remove this property in case you want to use multidborm
 });
+
 if(process.env.CONFIG){
 
     app.set('np_config', JSON.parse(process.env.CONFIG));
