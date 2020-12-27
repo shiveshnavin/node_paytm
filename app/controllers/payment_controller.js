@@ -22,6 +22,7 @@ module.exports = function (app, callbacks) {
         Transaction = require('../models/np_multidbplugin.js')('nptransactions',app.multidborm);
         Transaction.db = app.multidborm;
         Transaction.modelname = 'nptransactions'
+        Transaction.idFieldName='orderId'
         app.NPTransaction = Transaction;
     }
 

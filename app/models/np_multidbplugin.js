@@ -1,8 +1,8 @@
-module.exports = function (modelName,db) {
-
+module.exports = function (modelName, db) {
 
     class MultiDbMapper {
 
+        idFieldName
         objectData
         constructor(objectData) {
             MultiDbMapper.sanitizeRequest(objectData)
@@ -21,9 +21,12 @@ module.exports = function (modelName,db) {
         }
 
         async save() {
-
-            var response = await MultiDbMapper.db.insert(MultiDbMapper.modelname, this.objectData);
-            response = response.ops[0];
+            var response = await MultiDbMapper.db.insert(MultiDbMapper.modelname, this.objectData,this.objectData[MultiDbMapper.idFieldName]);
+            if ( typeof response == Object && response.ops[0])
+                response = response.ops[0];
+            else
+                response = this.objectData
+                
             MultiDbMapper.sanitizeRequest(response)
 
             return response;
@@ -38,7 +41,7 @@ module.exports = function (modelName,db) {
                 MultiDbMapper.sanitizeRequest(response)
             } catch (e) {
                 if (cb)
-                    cb(e, undefined)
+                    return cb(e, undefined)
                 else
                     throw e;
             }
@@ -57,7 +60,7 @@ module.exports = function (modelName,db) {
 
             } catch (e) {
                 if (cb)
-                    cb(e, undefined)
+                    return cb(e, undefined)
                 else
                     throw e;
             }
@@ -78,7 +81,7 @@ module.exports = function (modelName,db) {
 
             } catch (e) {
                 if (cb)
-                    cb(e, undefined)
+                    return cb(e, undefined)
                 else
                     throw e;
             }

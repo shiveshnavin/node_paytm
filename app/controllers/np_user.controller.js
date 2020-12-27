@@ -21,6 +21,7 @@ module.exports = function (app, callbacks) {
     User = require('../models/np_multidbplugin.js')('npusers',app.multidborm);
     User.db=app.multidborm;
     User.modelname='npusers'
+    User.idFieldName='id'
     app.NPUser = User;
   }
   module.create = (userData, cb) => {
