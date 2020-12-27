@@ -13,4 +13,4 @@ let TransactionSchema=mongoose.Schema({
     extra:String
 
 });
-module.exports=mongoose.model('NPTransaction',TransactionSchema);
+module.exports=mongoose.model('nptransaction',TransactionSchema);

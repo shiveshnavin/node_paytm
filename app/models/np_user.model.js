@@ -9,4 +9,4 @@ const UserSchema = mongoose.Schema({
     timestamps: true
 });
 
- module.exports = mongoose.model('NPUser', UserSchema);
+ module.exports = mongoose.model('npuser', UserSchema);
