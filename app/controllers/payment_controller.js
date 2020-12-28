@@ -374,7 +374,7 @@ module.exports = function (app, callbacks) {
                                         }
                                         else {
                                             if (callbacks !== undefined)
-                                            callbacks.onFinish(req.body.ORDER_ID, req.body);
+                                            callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
                                             res.send(saveRes)
                                         }
                                     });
