@@ -2,7 +2,7 @@ var packageInfo = require('../../package.json')
 const checksum_lib = require('./checksum/checksum.js');
 var request = require('request')
 var Transaction;
-var IDLEN = 10 ;
+var IDLEN = 10;
 
 function sanitizeRequest(body) {
 
@@ -19,10 +19,10 @@ module.exports = function (app, callbacks) {
     if (config.db_url) {
         Transaction = require('../models/np_transaction.model.js');
     } else if (app.multidborm) {
-        Transaction = require('../models/np_multidbplugin.js')('nptransactions',app.multidborm);
+        Transaction = require('../models/np_multidbplugin.js')('nptransactions', app.multidborm);
         Transaction.db = app.multidborm;
         Transaction.modelname = 'nptransactions'
-        Transaction.idFieldName='orderId'
+        Transaction.idFieldName = 'orderId'
         app.NPTransaction = Transaction;
     }
 
@@ -254,8 +254,6 @@ module.exports = function (app, callbacks) {
         console.log("NodePayTMPG::Transaction => ", req.body.ORDERID, req.body.STATUS);
         //console.log(req.body)
 
-        if (callbacks !== undefined)
-            callbacks.onFinish(req.body.ORDERID, req.body);
         if (result === true) {
 
             var myquery = { orderId: req.body.ORDERID };
@@ -275,6 +273,9 @@ module.exports = function (app, callbacks) {
                         res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                     }
                     else {
+
+                        if (callbacks !== undefined)
+                            callbacks.onFinish(req.body.ORDERID, req.body);
                         objForUpdate.readonly = "readonly"
                         objForUpdate.action = config.homepage
                         res.render(vp + "result.hbs", objForUpdate);
@@ -372,7 +373,8 @@ module.exports = function (app, callbacks) {
                                             res.send({ message: "Error Occured !", ORDERID: stat.ORDERID, TXNID: stat.TXNID })
                                         }
                                         else {
-
+                                            if (callbacks !== undefined)
+                                            callbacks.onFinish(req.body.ORDER_ID, req.body);
                                             res.send(saveRes)
                                         }
                                     });
