@@ -3,6 +3,7 @@ const checksum_lib = require('./checksum/checksum.js');
 var request = require('request')
 var Transaction;
 var IDLEN = 10;
+var nodeBase64 = require('nodejs-base64-converter');
 
 function sanitizeRequest(body) {
 
@@ -51,6 +52,14 @@ module.exports = function (app, callbacks) {
 
     module.init = (req, res) => {
 
+        if(!req.body.ORDER_ID && !req.body.EMAIL && req.query.to){
+
+            let toData = JSON.parse(nodeBase64.decode(req.query.to));
+            req.body.NAME=toData.NAME
+            req.body.EMAIL=toData.EMAIL
+            req.body.MOBILE_NO=toData.MOBILE_NO
+            req.body.ORDER_ID=toData.ORDER_ID
+        }
 
         sanitizeRequest(req.body);
         let gotAllParams = true;
@@ -300,9 +309,10 @@ module.exports = function (app, callbacks) {
             function (user) {
 
 
+                let id = makeid(config.id_length || IDLEN);
                 var txnTask = new Transaction({
-
-                    orderId: makeid(config.id_length || IDLEN),
+                    id:id,
+                    orderId: id,
                     cusId: user.id,
                     time: Date.now(),
                     status: 'INITIATED',
@@ -311,12 +321,20 @@ module.exports = function (app, callbacks) {
                     phone: user.phone,
                     amount: req.body.TXN_AMOUNT,
                     pname: req.body.PRODUCT_NAME,
-                    extra: (req.body.EXTRA)
+                    extra: (req.body.EXTRA||'')
 
                 });
 
 
                 txnTask.save().then(function (txn) {
+                    var urlData64 = nodeBase64.encode(JSON.stringify({
+                        NAME:txn.name,
+                        EMAIL:txn.email,
+                        MOBILE_NO:txn.phone,
+                        ORDER_ID:txn.orderId
+                    }))
+ 
+                    txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to='+urlData64;
                     res.send(txn)
                 })
                     .catch(err => {

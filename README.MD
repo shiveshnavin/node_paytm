@@ -119,13 +119,16 @@ MOBILE_NO
 PRODUCT_NAME
 TXN_AMOUNT
 
-This will generate an orderId in response . 
+This will generate an `orderId` and `payurl` in response . 
 Now Post to  /_pay/init using browser form
 
 NAME
 EMAIL
 MOBILE_NO
 ORDER_ID
+
+OR
+Simply open `payurl` in your browser
 
 ```
 APIS
