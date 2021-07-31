@@ -423,10 +423,24 @@ module.exports = function (app, callbacks) {
 
 
         useController.create({ name: req.body.NAME, email: req.body.EMAIL, phone: req.body.MOBILE_NO },
-            function (user) {
+            async function (user) {
 
 
-                let id = makeid(config.id_length || IDLEN);
+                let id;
+                if (config.paytm_url) {
+                    id = makeid(config.id_length || IDLEN)
+                }
+                else if (config.razor_url) {
+
+                    var options = {
+                        amount: req.body.TXN_AMOUNT * 100,
+                        currency: "INR",
+                        receipt: user.id + '_' + Date.now()
+                    };
+                    let order = await razorPayInstance.orders.create(options);
+                    id = order.id;
+                }
+
                 var txnTask = new Transaction({
                     id: id,
                     orderId: id,
