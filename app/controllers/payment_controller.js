@@ -147,7 +147,7 @@ module.exports = function (app, callbacks) {
                 "currency": "INR",
                 "name": "${params['PRODUCT_NAME']}",
                 "description": "Order # ${params['ORDER_ID']}",
-                "image": "${config.razor_logo}",
+                "image": "${config.logo}",
                 "order_id": "${params['ORDER_ID']}",
                 "callback_url": "${params['CALLBACK_URL']}",
                 "prefill": {

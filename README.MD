@@ -38,9 +38,10 @@ https://developer.paytm.com/docs
 npm install node-paytmpg --save
 ```
 
-In your main nodejs file set paytm configuration in express app
+In your main nodejs file set configuration in express app
 
 
+### Paytm
 ```code
 host_url : Host URL of your server . This will be used to redirect user after payment
 view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
@@ -55,6 +56,22 @@ path_prefix : All node_paytm_pg apis/pages will be available relative to this pa
 db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
 id_length: Length of Order ID and User ID
 
+```
+
+### Razorpay
+In case you want to use razorpay , Use the below configuration
+```
+host_url : Host URL of your server . This will be used to redirect user after payment
+view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
+razor_url : https://api.razorpay.com/
+MID : Your Paytm Merchant ID
+Website : "WEBSTAGING" for Test and for Production , the website you entered while activation
+KEY : Your generated API Key
+SECRET : Your API Key secret
+homepage : Homepage of your website where user can go after payment confirmation page
+path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
+db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
+id_length: Length of Order ID and User ID
 ```
 
 Place these 2 statements in your main nodejs file before calling app.listen(..)
@@ -76,7 +93,6 @@ app.multidborm = mongodb;
 app.set('np_config', {
     "host_url":"http://127.0.0.1:5542", 
     "view_path":"/../views/",
-    "paytm_url":"https://securegw-stage.paytm.in",
     "MID":"XXXXXXXXXXX",
     "WEBSITE":"WEBSTAGING",
     "KEY":"XXXXXXXXXXX",
@@ -85,7 +101,14 @@ app.set('np_config', {
     "homepage":"/_pay/home",
     "path_prefix":"_pay",
     "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123", // Remove this property in case you want to use multidborm
-    "id_length":10
+    "id_length":10,
+    "logo":"/favicon.ico",
+    "theme_color":"#3399cc",
+
+    "paytm_url":"https://securegw-stage.paytm.in", // Only For PayTm
+    
+    "razor_url":"https://api.razorpay.com/", // Only For RazorPay
+    "SECRET":"XXXXXXXXXXX", //Only For RazorPay , Your razorpay api key secret
 
 });
 
