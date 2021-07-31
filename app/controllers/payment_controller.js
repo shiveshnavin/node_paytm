@@ -129,6 +129,12 @@ module.exports = function (app, callbacks) {
 
 
 
+                let fail = `<div style="display:none">
+                
+                <form method="post" action="${params['CALLBACK_URL']}" id="fail">
+                <input name="razorpay_order_id" value="${params['ORDER_ID']}" hidden="true"/>
+                </form> 
+                </div>`;
                 let html = `
             <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
             <script>
@@ -148,14 +154,20 @@ module.exports = function (app, callbacks) {
                 },
                 "theme": {
                     "color": "${config.theme_color}"
+                }, 
+                "modal": {
+                    "ondismiss": function(){
+                        document.getElementById("fail").submit()
+                    }
                 }
             };
             var rzp1 = new Razorpay(options);
+ 
             rzp1.open();
             </script>`;
 
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${html}</center></body></html>`);
+                res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${html}<br>${fail}</center></body></html>`);
                 res.end();
 
             }
@@ -336,23 +348,28 @@ module.exports = function (app, callbacks) {
     module.callback = (req, res) => {
 
         var result = false;
+        let isCancelled = false;
         if (config.paytm_url) {
             var checksumhash = req.body.CHECKSUMHASH;
             result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
         }
         else if (config.razor_url) {
-            result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
-                req.body.razorpay_payment_id,
-                config.SECRET,
-                req.body.razorpay_signature)
-            if (result && req.body.razorpay_payment_id) {
-                req.body.STATUS = 'TXN_SUCCESS'
-                req.body.ORDERID = req.body.razorpay_order_id
-                req.body.TXNID = req.body.razorpay_payment_id
+
+            if (req.body.razorpay_payment_id) {
+                result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
+                    req.body.razorpay_payment_id,
+                    config.SECRET,
+                    req.body.razorpay_signature)
+                if (result) {
+                    req.body.STATUS = 'TXN_SUCCESS'
+                    req.body.ORDERID = req.body.razorpay_order_id
+                    req.body.TXNID = req.body.razorpay_payment_id
+                }
             }
             else {
                 req.body.STATUS = 'TXN_FAILURE'
                 req.body.ORDERID = req.body.razorpay_order_id
+                isCancelled = true;
             }
         }
 
@@ -360,7 +377,7 @@ module.exports = function (app, callbacks) {
         console.log("NodePayTMPG::Transaction => ", req.body.ORDERID, req.body.STATUS);
         //console.log(req.body)
 
-        if (result === true) {
+        if (result || isCancelled) {
 
             var myquery = { orderId: req.body.ORDERID };
             Transaction.findOne(myquery, function (err, objForUpdate) {
@@ -394,7 +411,7 @@ module.exports = function (app, callbacks) {
         }
         else {
 
-            res.send({ message: "Invalid Checksum !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
+            res.send({ message: "Something went wrong ! Please try again later .", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
 
         }
 

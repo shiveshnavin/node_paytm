@@ -1,7 +1,7 @@
 {
   "name": "node-paytmpg",
   "version": "3.0.1",
-  "description": "Paytm Gateway Integration using NodeJS",
+  "description": "Payment Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
     "start": "node example.js"
