@@ -34,7 +34,7 @@ if(process.env.CONFIG){
     
 }
 
-require('node-paytmpg')(app,express)
+require('./index')(app,express)
 
 app.all('/',function(req,res)
 {

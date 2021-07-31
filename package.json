@@ -1,6 +1,6 @@
 {
   "name": "node-paytmpg",
-  "version": "2.0.4",
+  "version": "3.0.1",
   "description": "Paytm Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
@@ -33,8 +33,8 @@
     "express-handlebars": "^3.0.2",
     "mongoose": "^5.4.16",
     "multi-db-orm": "^1.0.5",
-    "node-paytmpg": "^1.2.1",
     "nodejs-base64-converter": "^1.0.5",
+    "razorpay": "^2.0.6",
     "request": "^2.88.0",
     "util": "^0.11.1"
   }

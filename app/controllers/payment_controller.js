@@ -4,6 +4,7 @@ var request = require('request')
 var Transaction;
 var IDLEN = 10;
 var nodeBase64 = require('nodejs-base64-converter');
+var RazorPay = require('razorpay');
 
 function sanitizeRequest(body) {
 
@@ -50,15 +51,15 @@ module.exports = function (app, callbacks) {
 
     }
 
-    module.init = (req, res) => {
+    module.init = async function (req, res) {
 
-        if(!req.body.ORDER_ID && !req.body.EMAIL && req.query.to){
+        if (!req.body.ORDER_ID && !req.body.EMAIL && req.query.to) {
 
             let toData = JSON.parse(nodeBase64.decode(req.query.to));
-            req.body.NAME=toData.NAME
-            req.body.EMAIL=toData.EMAIL
-            req.body.MOBILE_NO=toData.MOBILE_NO
-            req.body.ORDER_ID=toData.ORDER_ID
+            req.body.NAME = toData.NAME
+            req.body.EMAIL = toData.EMAIL
+            req.body.MOBILE_NO = toData.MOBILE_NO
+            req.body.ORDER_ID = toData.ORDER_ID
         }
 
         sanitizeRequest(req.body);
@@ -89,6 +90,7 @@ module.exports = function (app, callbacks) {
             //  console.log('redirect')
             // console.log(req.body)
             var params = {};
+
             params['MID'] = req.body.MID;
             params['WEBSITE'] = req.body.WEBSITE;
             params['CHANNEL_ID'] = req.body.CHANNEL_ID;
@@ -99,23 +101,64 @@ module.exports = function (app, callbacks) {
             params['CALLBACK_URL'] = req.body.CALLBACK_URL;
             params['EMAIL'] = req.body.EMAIL;
             params['MOBILE_NO'] = req.body.MOBILE_NO;
+            params['PRODUCT_NAME'] = req.body.PRODUCT_NAME;
+            params['NAME'] = req.body.NAME;
 
-            checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+            if (config.paytm_url) {
 
-                var txn_url = config.paytm_url + "/theia/processTransaction"; // for staging
 
-                // console.log(checksum)
-                var form_fields = "";
-                for (var x in params) {
-                    form_fields += "<input type='hidden' name='" + x + "' value='" + params[x] + "' >";
+                checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+
+
+                    var txn_url = config.paytm_url + "/theia/processTransaction"; // for staging
+
+                    // console.log(checksum)
+                    var form_fields = "";
+                    for (var x in params) {
+                        form_fields += "<input type='hidden' name='" + x + "' value='" + params[x] + "' >";
+                    }
+                    form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
+
+                    res.writeHead(200, { 'Content-Type': 'text/html' });
+                    res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1></center><form method="post" action="' + txn_url + '" name="f1">' + form_fields + '</form><script type="text/javascript">document.f1.submit();</script></body></html>');
+                    res.end();
+
+                });
+            }
+            else if (config.razor_url) {
+
+
+
+                let html = `
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+            <script>
+            var options = {
+                "key": "${config.KEY}", 
+                "amount": "${parseFloat(params['TXN_AMOUNT']) * 100}", 
+                "currency": "INR",
+                "name": "${params['PRODUCT_NAME']}",
+                "description": "Order # ${params['ORDER_ID']}",
+                "image": "${config.razor_logo}",
+                "order_id": "${params['ORDER_ID']}",
+                "callback_url": "${params['CALLBACK_URL']}",
+                "prefill": {
+                    "name": "${params['NAME']}",
+                    "email": "${params['EMAIL']}",
+                    "contact": "${params['MOBILE_NO']}"
+                },
+                "theme": {
+                    "color": "${config.theme_color}"
                 }
-                form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
+            };
+            var rzp1 = new Razorpay(options);
+            rzp1.open();
+            </script>`;
 
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1></center><form method="post" action="' + txn_url + '" name="f1">' + form_fields + '</form><script type="text/javascript">document.f1.submit();</script></body></html>');
+                res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${html}</center></body></html>`);
                 res.end();
-            });
 
+            }
             if (callbacks !== undefined)
                 callbacks.onStart(params['ORDER_ID'], params);
         }
@@ -127,7 +170,7 @@ module.exports = function (app, callbacks) {
 
                     //console.log(user)
 
-                    let onTxn = txnData => {
+                    let onTxn = async function (txnData) {
 
 
                         //console.log(txnData)
@@ -143,32 +186,38 @@ module.exports = function (app, callbacks) {
                         params['CALLBACK_URL'] = config.host_url + '/' + config.path_prefix + '/callback'
                         params['EMAIL'] = txnData.email;
                         params['MOBILE_NO'] = txnData.phone;
+                        params['NAME'] = txnData.name;
+                        params['PRODUCT_NAME'] = txnData.pname;
 
 
+                        let showConfirmation =
+                            function (err, checksum) {
+                                res.render(vp + "init.hbs", {
+                                    action: '',
+                                    readonly: 'readonly',
+                                    BUTTON: 'Pay',
+                                    NAME: params['NAME'],
+                                    EMAIL: params['EMAIL'],
+                                    MOBILE_NO: params['MOBILE_NO'],
+                                    PRODUCT_NAME: params['PRODUCT_NAME'],
+                                    TXN_AMOUNT: params['TXN_AMOUNT'],
+                                    MID: params['MID'],
+                                    WEBSITE: params['WEBSITE'],
+                                    ORDER_ID: params['ORDER_ID'],
+                                    CUST_ID: params['CUST_ID'],
+                                    INDUSTRY_TYPE_ID: params['INDUSTRY_TYPE_ID'],
+                                    CHANNEL_ID: params['CHANNEL_ID'],
+                                    CALLBACK_URL: params['CALLBACK_URL'],
+                                    CHECKSUMHASH: checksum
+                                })
+                            }
 
 
-                        checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
-                            res.render(vp + "init.hbs", {
-
-                                action: '',
-                                readonly: 'readonly',
-                                BUTTON: 'Pay',
-                                NAME: params['NAME'],
-                                EMAIL: params['EMAIL'],
-                                MOBILE_NO: params['MOBILE_NO'],
-                                PRODUCT_NAME: params['PRODUCT_NAME'],
-                                TXN_AMOUNT: params['TXN_AMOUNT'],
-                                MID: params['MID'],
-                                WEBSITE: params['WEBSITE'],
-                                ORDER_ID: params['ORDER_ID'],
-                                CUST_ID: params['CUST_ID'],
-                                INDUSTRY_TYPE_ID: params['INDUSTRY_TYPE_ID'],
-                                CHANNEL_ID: params['CHANNEL_ID'],
-                                CALLBACK_URL: params['CALLBACK_URL'],
-                                CHECKSUMHASH: checksum
-                            })
-
-                        });
+                        if (config.paytm_url)
+                            checksum_lib.genchecksum(params, config.KEY, showConfirmation);
+                        else if (config.razor_url) {
+                            showConfirmation()
+                        }
 
                     };
 
@@ -189,29 +238,59 @@ module.exports = function (app, callbacks) {
                     }
                     else {
 
-                        var txnTask = new Transaction({
 
-                            orderId: makeid(config.id_length || IDLEN),
-                            cusId: user.id,
-                            time: Date.now(),
-                            status: 'INITIATED',
-                            name: user.name,
-                            email: user.email,
-                            phone: user.phone,
-                            amount: req.body.TXN_AMOUNT,
-                            pname: req.body.PRODUCT_NAME,
-                            extra: ''
+                        function onOrder(orderId) {
 
-                        });
+                            var txnTask = new Transaction({
 
+                                orderId: orderId,
+                                cusId: user.id,
+                                time: Date.now(),
+                                status: 'INITIATED',
+                                name: user.name,
+                                email: user.email,
+                                phone: user.phone,
+                                amount: req.body.TXN_AMOUNT,
+                                pname: req.body.PRODUCT_NAME,
+                                extra: ''
 
-                        txnTask.save().then(onTxn)
-                            .catch(err => {
-
-                                console.log(err)
-
-                                res.redirect('')
                             });
+
+                            txnTask.save().then(onTxn)
+                                .catch(err => {
+
+                                    console.log(err)
+
+                                    res.redirect('')
+                                });
+                        }
+
+                        let orderId;
+                        if (config.paytm_url) {
+                            orderId = makeid(config.id_length || IDLEN)
+                            onOrder(orderId)
+                        }
+                        else if (config.razor_url) {
+
+                            var options = {
+                                amount: req.body.TXN_AMOUNT * 100,
+                                currency: "INR",
+                                receipt: user.id + '_' + Date.now()
+                            };
+
+                            var razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+
+                            razorPayInstance.orders.create(options, function (err, order) {
+                                if (err) {
+                                    res.send({ message: "An error occurred ! " + err.message })
+                                    return;
+                                }
+                                orderId = order.id
+                                onOrder(orderId)
+                            })
+                        }
+
+
 
                     }
 
@@ -256,9 +335,27 @@ module.exports = function (app, callbacks) {
 
     module.callback = (req, res) => {
 
+        var result = false;
+        if (config.paytm_url) {
+            var checksumhash = req.body.CHECKSUMHASH;
+            result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
+        }
+        else if (config.razor_url) {
+            result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
+                req.body.razorpay_payment_id,
+                config.SECRET,
+                req.body.razorpay_signature)
+            if (result && req.body.razorpay_payment_id) {
+                req.body.STATUS = 'TXN_SUCCESS'
+                req.body.ORDERID = req.body.razorpay_order_id
+                req.body.TXNID = req.body.razorpay_payment_id
+            }
+            else {
+                req.body.STATUS = 'TXN_FAILURE'
+                req.body.ORDERID = req.body.razorpay_order_id
+            }
+        }
 
-        var checksumhash = req.body.CHECKSUMHASH;
-        var result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
         //console.log("Checksum Result => ", result, "\n");
         console.log("NodePayTMPG::Transaction => ", req.body.ORDERID, req.body.STATUS);
         //console.log(req.body)
@@ -273,6 +370,7 @@ module.exports = function (app, callbacks) {
                     return;
                 }
                 objForUpdate.status = req.body.STATUS;
+                objForUpdate.TXNID = req.body.TXNID;
                 objForUpdate.extra = JSON.stringify(req.body);
 
                 var newvalues = { $set: objForUpdate };
@@ -311,7 +409,7 @@ module.exports = function (app, callbacks) {
 
                 let id = makeid(config.id_length || IDLEN);
                 var txnTask = new Transaction({
-                    id:id,
+                    id: id,
                     orderId: id,
                     cusId: user.id,
                     time: Date.now(),
@@ -321,20 +419,20 @@ module.exports = function (app, callbacks) {
                     phone: user.phone,
                     amount: req.body.TXN_AMOUNT,
                     pname: req.body.PRODUCT_NAME,
-                    extra: (req.body.EXTRA||'')
+                    extra: (req.body.EXTRA || '')
 
                 });
 
 
                 txnTask.save().then(function (txn) {
                     var urlData64 = nodeBase64.encode(JSON.stringify({
-                        NAME:txn.name,
-                        EMAIL:txn.email,
-                        MOBILE_NO:txn.phone,
-                        ORDER_ID:txn.orderId
+                        NAME: txn.name,
+                        EMAIL: txn.email,
+                        MOBILE_NO: txn.phone,
+                        ORDER_ID: txn.orderId
                     }))
- 
-                    txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to='+urlData64;
+
+                    txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
                     res.send(txn)
                 })
                     .catch(err => {
@@ -392,7 +490,7 @@ module.exports = function (app, callbacks) {
                                         }
                                         else {
                                             if (callbacks !== undefined)
-                                            callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
+                                                callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
                                             res.send(saveRes)
                                         }
                                     });
