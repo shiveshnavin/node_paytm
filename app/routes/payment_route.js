@@ -36,7 +36,15 @@ module.exports = (app, express, callbacks) => {
 
     app.engine('hbs', exphbs({
         extname: 'hbs',
-        defaultLayout: vp + '/layouts/index.hbs'
+        defaultLayout: vp + '/layouts/index.hbs',
+        helpers: {
+            theme_color: function () {
+                return config.theme_color;
+            },
+            logo: function () {
+                return config.logo;
+            }
+        }
     }))
 
     app.set('view engine', 'handlebars');
