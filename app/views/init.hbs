@@ -1,79 +1,83 @@
-  <h2>Payment Start</h2>
+<h2>Payment Start</h2>
 
-        <form action="{{action}}" method="POST">
-          <ul class="form-list">
-  {{#if check}} 
+<form action="{{action}}" method="POST">
+  <ul class="form-list">
+    {{#if check}}
 
-            <li class="form-list__row">
-              <label>Name</label>
-              <input type="text" name="NAME" required=""  value="{{NAME}}" {{readonly}}/>
-            </li> 
-  {{else}}
-              <input type="hidden" name="NAME" required=""  value="{{NAME}}" {{readonly}}/>
-  
-  {{/if}}         
-            <li class="form-list__row">
-              <label>E-Mail</label>
-              <input type="text" name="EMAIL" required=""  value="{{EMAIL}}" {{readonly}}/>
-            </li> 
-              
-            <li class="form-list__row">
-              <label>Phone</label>
-              <input type="text" name="MOBILE_NO" required="" value="{{MOBILE_NO}}" {{readonly}}/>
-            </li> 
-           
- 
-            <li class="form-list__row form-list__row--inline">
-             
-  {{#if check}} 
+    <li class="form-list__row">
+      <label>Name</label>
+      <input type="text" name="NAME" required="" value="{{NAME}}" {{readonly}} />
+    </li>
+    {{else}}
+    <input type="hidden" name="NAME" required="" value="{{NAME}}" {{readonly}} />
 
-              <div>
-                <label> 
-                    Product
-                </label>
-                 <input type="text" name="PRODUCT_NAME" required=""  value="{{PRODUCT_NAME}}" {{readonly}}/>
-              </div>
-  {{else}}
-             <input type="hidden" name="PRODUCT_NAME" required=""  value="{{PRODUCT_NAME}}" {{readonly}}/>
-  {{/if}} 
-               <div>
-                <label> 
-                    Amount
-                </label>
-                 <input type="text" name="TXN_AMOUNT" required="" value="{{TXN_AMOUNT}}" {{readonly}} />
-              </div>
+    {{/if}}
+    <li class="form-list__row">
+      <label>E-Mail</label>
+      <input type="text" name="EMAIL" required="" value="{{EMAIL}}" {{readonly}} />
+    </li>
 
-            </li>
- 
-  {{#if check}} 
+    <li class="form-list__row">
+      <label>Phone</label>
+      <input type="text" name="MOBILE_NO" required="" value="{{MOBILE_NO}}" {{readonly}} />
+    </li>
 
-            <li class="form-list__row form-list__row--agree">
-              <label>
-                <input type="checkbox" name="save_cc" checked="checked">
-                I agree to terms and conditions 
-              </label>
-            </li>
-  {{/if}} 
-  
-            <li>
-              <button type="submit" class="button">{{BUTTON}}</button>
-            </li>
-          </ul>
 
- 
+    <li class="form-list__row">
 
-                    <input type="hidden" name="MID" value="{{MID}}" {{readonly}} >
-                    <input type="hidden" name="WEBSITE" value="{{WEBSITE}}" {{readonly}} >
-                    <input type="hidden" name="ORDER_ID" value="{{ORDER_ID}}" {{readonly}} >
-                    <input type="hidden" name="CUST_ID" value="{{CUST_ID}}" {{readonly}} >  
-                    <input type="hidden" name="INDUSTRY_TYPE_ID" value="{{INDUSTRY_TYPE_ID}}" {{readonly}} >
-                    <input type="hidden" name="CHANNEL_ID" value="{{CHANNEL_ID}}" {{readonly}} > 
-                    <input type="hidden" name="CALLBACK_URL" value="{{CALLBACK_URL}}" {{readonly}} >
-                    <input type="hidden" name="CHECKSUMHASH" value="{{CHECKSUMHASH}}" {{readonly}} >
+      {{#if check}}
+
+      <div>
+        <label>
+          Product
+        </label>
+        <input type="text" name="PRODUCT_NAME" required="" value="{{PRODUCT_NAME}}" {{readonly}} />
+      </div>
+      {{else}}
+      <input type="hidden" name="PRODUCT_NAME" required="" value="{{PRODUCT_NAME}}" {{readonly}} />
+      {{/if}}
+
+    </li>
+    <li class="form-list__row">
+
+      <div>
+        <label>
+          Amount
+        </label>
+        <input type="text" name="TXN_AMOUNT" required="" value="{{TXN_AMOUNT}}" {{readonly}} />
+      </div>
+
+    </li>
+
+    {{#if check}}
+
+    <li class="form-list__row form-list__row--agree">
+      <label>
+        <input type="checkbox" name="save_cc" checked="checked">
+        I agree to terms and conditions
+      </label>
+    </li>
+    {{/if}}
+
+    <li>
+      <button type="submit" class="button">{{BUTTON}}</button>
+    </li>
+  </ul>
 
 
 
+  <input type="hidden" name="MID" value="{{MID}}" {{readonly}}>
+  <input type="hidden" name="WEBSITE" value="{{WEBSITE}}" {{readonly}}>
+  <input type="hidden" name="ORDER_ID" value="{{ORDER_ID}}" {{readonly}}>
+  <input type="hidden" name="CUST_ID" value="{{CUST_ID}}" {{readonly}}>
+  <input type="hidden" name="INDUSTRY_TYPE_ID" value="{{INDUSTRY_TYPE_ID}}" {{readonly}}>
+  <input type="hidden" name="CHANNEL_ID" value="{{CHANNEL_ID}}" {{readonly}}>
+  <input type="hidden" name="CALLBACK_URL" value="{{CALLBACK_URL}}" {{readonly}}>
+  <input type="hidden" name="CHECKSUMHASH" value="{{CHECKSUMHASH}}" {{readonly}}>
 
 
 
-        </form>
+
+
+
+</form>
