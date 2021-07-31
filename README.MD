@@ -1,5 +1,8 @@
-## Node JS PayTm Easy Integration
-
+## Node JS Payments Easy Integration
+Support for : 
+ - Paytm
+ - RazorPay
+ 
 Does all the hardwork for you while integrating paytm with nodejs server. 
 
 ## Example 
@@ -10,7 +13,7 @@ Use any Card Details or Net Banking
 username : test
 password : test
 
-Git : https://github.com/shiveshnavin/payment-gateway-example
+Example App Sourcecode : https://github.com/shiveshnavin/payment-gateway-example
 
 ### Requirments
 
@@ -44,7 +47,7 @@ In your main nodejs file set configuration in express app
 ### Paytm
 ```code
 host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
+view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
 paytm_url : For Test "https://securegw-stage.paytm.in" and for Production "https://securegw.paytm.in"
 MID : Your Paytm Merchant ID
 Website : "WEBSTAGING" for Test and for Production , the website you entered while activation
@@ -62,10 +65,9 @@ id_length: Length of Order ID and User ID
 In case you want to use razorpay , Use the below configuration
 ```
 host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page from node_paytm_pg library
+view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
 razor_url : https://api.razorpay.com/
 MID : Your Paytm Merchant ID
-Website : "WEBSTAGING" for Test and for Production , the website you entered while activation
 KEY : Your generated API Key
 SECRET : Your API Key secret
 homepage : Homepage of your website where user can go after payment confirmation page
