@@ -18,6 +18,9 @@ module.exports = function (app, callbacks) {
     var config = (app.get('np_config'))
     var useController = require('./np_user.controller.js')(app, callbacks);
 
+    if (config.razor_url)
+        var razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+
     if (config.db_url) {
         Transaction = require('../models/np_transaction.model.js');
     } else if (app.multidborm) {
@@ -290,7 +293,6 @@ module.exports = function (app, callbacks) {
                                 receipt: user.id + '_' + Date.now()
                             };
 
-                            var razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
 
                             razorPayInstance.orders.create(options, function (err, order) {
                                 if (err) {
@@ -470,7 +472,7 @@ module.exports = function (app, callbacks) {
     module.status = (req, res) => {
 
         var myquery = { orderId: req.body.ORDER_ID };
-        Transaction.findOne(myquery, function (err, objForUpdate) {
+        Transaction.findOne(myquery, async function (err, objForUpdate) {
 
 
             if (err) {
@@ -483,49 +485,72 @@ module.exports = function (app, callbacks) {
                 params["MID"] = config.MID;
                 params["ORDERID"] = req.body.ORDER_ID;
 
+                async function onStatusUpdate(paytmResponse) {
+                    if (paytmResponse.TXNID.length > 4) {
+                        objForUpdate.status = paytmResponse.STATUS;
+                        objForUpdate.extra = JSON.stringify(paytmResponse);
 
-                checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+                        var newvalues = { $set: objForUpdate };
+                        Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
 
-                    request.post(
-                        config.paytm_url + "/order/status",
-                        { json: { MID: config.MID, ORDERID: req.body.ORDER_ID, CHECKSUMHASH: checksum, } },
-                        function (error, response, body) {
-
-                            if (!error && response.statusCode == 200) {
-                                // console.log(body);
-
-                                var stat = JSON.parse(JSON.stringify(body))
-                                if (stat.TXNID.length > 4) {
-                                    objForUpdate.status = stat.STATUS;
-                                    objForUpdate.extra = JSON.stringify(stat);
-
-                                    var newvalues = { $set: objForUpdate };
-                                    Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
-
-                                        if (err) {
-                                            res.send({ message: "Error Occured !", ORDERID: stat.ORDERID, TXNID: stat.TXNID })
-                                        }
-                                        else {
-                                            if (callbacks !== undefined)
-                                                callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
-                                            res.send(saveRes)
-                                        }
-                                    });
-                                }
-                                else {
-                                    res.send(objForUpdate)
-
-                                }
-
-
-
+                            if (err) {
+                                res.send({ message: "Error Occured !", ORDERID: paytmResponse.ORDERID, TXNID: paytmResponse.TXNID })
                             }
                             else {
-                                console.log('ERROR:::', error, '\n', response);
+                                if (callbacks !== undefined)
+                                    callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
+                                res.send(paytmResponse)
                             }
-                        }
-                    );
-                });
+                        });
+                    }
+                    else {
+                        res.send(objForUpdate)
+
+                    }
+                }
+
+                if (config.paytm_url) {
+                    checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+
+                        request.post(
+                            config.paytm_url + "/order/status",
+                            { json: { MID: config.MID, ORDERID: req.body.ORDER_ID, CHECKSUMHASH: checksum, } },
+                            function (error, response, body) {
+
+                                if (!error && response.statusCode == 200) {
+                                    // console.log(body);
+                                    var paytmResponse = JSON.parse(JSON.stringify(body))
+                                    onStatusUpdate(paytmResponse)
+                                }
+                                else {
+                                    console.log('ERROR:::', error, '\n', response);
+                                    res.status(500)
+                                    res.send({ message: "Error Occured !", ORDERID: req.body.ORDER_ID })
+                                }
+                            }
+                        );
+                    });
+                }
+                else if (config.razor_url) {
+                    let result = await razorPayInstance.orders.fetch(req.body.ORDER_ID)
+                    result.ORDERID = req.body.ORDER_ID
+                    if (result.status == 'paid' && result.amount_due == 0) {
+                        result.STATUS = 'TXN_SUCCESS'
+                        let payments = await razorPayInstance.orders.fetchPayments(req.body.ORDER_ID)
+                        payments.items.forEach(item => {
+                            if (item.status == 'captured') {
+                                result.TXNID = item.id
+                            }
+                        });
+                        result.payments = payments;
+
+                        onStatusUpdate(result)
+                    }
+                    else {
+                        res.send(objForUpdate);
+                    }
+                }
+
             }
             else {
                 res.send(objForUpdate);
