@@ -369,6 +369,10 @@ module.exports = function (app, callbacks) {
                 }
             }
             else {
+                if (req.body.error && req.body.error.metadata && JSON.parse(req.body.error.metadata)) {
+                    let orderId = JSON.parse(req.body.error.metadata).order_id
+                    req.body.razorpay_order_id = orderId
+                }
                 req.body.STATUS = 'TXN_FAILURE'
                 req.body.ORDERID = req.body.razorpay_order_id
                 isCancelled = true;
