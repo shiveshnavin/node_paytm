@@ -3,7 +3,7 @@ Support for :
  - Paytm
  - RazorPay
  
-Does all the hardwork for you while integrating payment gateway with inbuilt UI and REST APIs with any express app. 
+Does all the hardwork for you while integrating payments in any express app. Comes with inbuilt UI and REST APIs for lightning fast development and prototyping .
 
 ## Example 
 
