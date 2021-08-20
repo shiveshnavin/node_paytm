@@ -1,6 +1,6 @@
 {
   "name": "node-paytmpg",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "description": "Payment Gateway Integration using NodeJS",
   "main": "index.js",
   "scripts": {
