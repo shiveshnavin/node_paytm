@@ -3,7 +3,7 @@ Support for :
  - Paytm
  - RazorPay
  
-Does all the hardwork for you while integrating paytm with nodejs server. 
+Does all the hardwork for you while integrating payment gateway with inbuilt UI and REST APIs with any express app. 
 
 ## Example 
 
