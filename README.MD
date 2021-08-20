@@ -1,5 +1,6 @@
 ## Node JS Payments Easy Integration
 
+[![Node.js Package](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml)
 [![Node.js CI](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml)
 
 Support for : 
