@@ -1,6 +1,6 @@
 ## Node JS Payments Easy Integration
 
-[![NPM Publish](https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Npm-logo.svg/1200px-Npm-logo.svg.png)](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml)
+[![NPM Publish](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml)
 [![Node.js CI](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml)
 
 Support for : 
