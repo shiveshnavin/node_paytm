@@ -116,12 +116,6 @@ module.exports = function (app, callbacks) {
 
             if (config.paytm_url) {
 
-                let paytmJsCheckouHtml = `<html>
-                    <head>
-                    
-                    </head>
-                    </html>`
-
                 let initTxnbody = {
                     "requestType": "Payment",
                     "mid": params['MID'],
@@ -148,7 +142,8 @@ module.exports = function (app, callbacks) {
                         json: {
                             "body": initTxnbody,
                             "head": {
-                                "signature": checksum
+                                "signature": checksum,
+                                "channelId": params['CHANNEL_ID']
                             }
                         }
                     },
@@ -160,7 +155,109 @@ module.exports = function (app, callbacks) {
                             body.body.resultInfo &&
                             body.body.resultInfo.resultStatus == "S") {
 
-                            return res.send(body)
+
+                            let paytmJsCheckouHtml = `<html>
+                <head>
+                <title>Merchant Checkout</title>
+                <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0"/>
+                
+                </head>
+                <body>
+                <center>
+                <h1>Please donot close this page or press the back button. Processing...</h1>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin:auto;background:#fff;display:block;" width="200px" height="200px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+                    <g transform="rotate(0 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.9166666666666666s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(30 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.8333333333333334s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(60 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.75s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(90 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.6666666666666666s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(120 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.5833333333333334s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(150 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.5s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(180 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.4166666666666667s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(210 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.3333333333333333s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(240 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.25s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(270 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.16666666666666666s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(300 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="-0.08333333333333333s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g><g transform="rotate(330 50 50)">
+                    <rect x="47" y="24" rx="3" ry="6" width="6" height="12" fill="#fe718d">
+                        <animate attributeName="opacity" values="1;0" keyTimes="0;1" dur="1s" begin="0s" repeatCount="indefinite"></animate>
+                    </rect>
+                    </g>
+                    </svg>
+                </center>
+                
+
+                <script>
+                  function onScriptLoad(){
+                      var config = {
+                        "root": "",
+                        "flow": "DEFAULT",
+                        "data": {
+                        "orderId": "${params['ORDER_ID']}", /* update order id */
+                        "token": "${body.body.txnToken}", /* update token value */
+                        "tokenType": "TXN_TOKEN",
+                        "amount": "${params['TXN_AMOUNT']}" /* update amount */
+                        },
+                        "handler": {
+                          "notifyMerchant": function(eventName,data){
+                            console.log("notifyMerchant handler function called");
+                            console.log("eventName => ",eventName);
+                            console.log("data => ",data);
+                          } 
+                        }
+                      };
+                
+                      if(window.Paytm && window.Paytm.CheckoutJS){
+                          window.Paytm.CheckoutJS.onLoad(function excecuteAfterCompleteLoad() {
+                              // initialze configuration using init method 
+                              window.Paytm.CheckoutJS.init(config).then(function onSuccess() {
+                                  // after successfully updating configuration, invoke JS Checkout
+                                  window.Paytm.CheckoutJS.invoke();
+                              }).catch(function onError(error){
+                                  console.log("error => ",error);
+                              });
+                          });
+                      } 
+                  }
+                </script>
+                <script type="application/javascript" crossorigin="anonymous" src="${config.paytm_url}/merchantpgpui/checkoutjs/merchants/${params['MID']}.js" onload="onScriptLoad();" crossorigin="anonymous"></script>
+
+
+                </body>
+                </html>`
+                            return res.send(paytmJsCheckouHtml)
 
                         }
                         else {
@@ -334,6 +431,7 @@ module.exports = function (app, callbacks) {
                                 orderId: orderId,
                                 cusId: user.id,
                                 time: Date.now(),
+                                timeStamp: Date.now(),
                                 status: 'INITIATED',
                                 name: user.name,
                                 email: user.email,
@@ -468,6 +566,9 @@ module.exports = function (app, callbacks) {
                 if (err) {
                     res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                     return;
+                }
+                if (req.body.status == "paid" && !req.body.STATUS) {
+                    req.body.STATUS = "TXN_SUCCESS"
                 }
                 objForUpdate.status = req.body.STATUS;
                 objForUpdate.TXNID = req.body.TXNID;
