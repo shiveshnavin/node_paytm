@@ -149,7 +149,8 @@ module.exports = function (app, callbacks) {
                     },
                     function (error, response, body) {
 
-                        if (!error &&
+                        if (!error && response.statusCode != undefined
+                            && response.statusCode != NaN &&
                             response.statusCode == 200 &&
                             body.body &&
                             body.body.resultInfo &&
@@ -217,13 +218,65 @@ module.exports = function (app, callbacks) {
                     </g>
                     </svg>
                 </center>
+                <form id="cancelform" action="${params['CALLBACK_URL']}" method="post">
+                    <input type="hidden" name="TXNID" value="na"/>
+                    <input type="hidden" name="STATUS" value="TXN_FAILURE"/>
+                    <input type="hidden" name="CANCELLED" value="cancelled"/>
+                    <input id="RESPMSG" type="hidden" name="RESPMSG" value=""/>
+                    <input type="hidden" name="ORDERID" value="${params["ORDER_ID"]}"/>
+                </form>
                 
 
                 <script>
+
+                function getBodyColor(color){
+                        const hex = color.replace('#', '');
+                        const c_r = parseInt(hex.substr(0, 2), 16);
+                        const c_g = parseInt(hex.substr(2, 2), 16);
+                        const c_b = parseInt(hex.substr(4, 2), 16);
+                        const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
+                     //   console.log(brightness , brightness > 155 ? "#fff" : "#1a1a1c")
+                        return brightness > 155 ? "#1a1a1c" : "#ffffff";
+                }
+
+                function shadeColor(color, percent) {
+
+                    var R = parseInt(color.substring(1,3),16);
+                    var G = parseInt(color.substring(3,5),16);
+                    var B = parseInt(color.substring(5,7),16);
+                
+                    R = parseInt(R * (100 + percent) / 100);
+                    G = parseInt(G * (100 + percent) / 100);
+                    B = parseInt(B * (100 + percent) / 100);
+                
+                    R = (R<255)?R:255;  
+                    G = (G<255)?G:255;  
+                    B = (B<255)?B:255;  
+                
+                    var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+                    var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+                    var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+                
+                    return "#"+RR+GG+BB;
+                }
+
+                function failTxn(reason) {
+                    var form = document.getElementById("cancelform");
+                    var element2 = document.getElementById("RESPMSG");  
+                    element2.value=reason;
+                    form.submit();
+                }
                   function onScriptLoad(){
                       var config = {
                         "root": "",
                         "flow": "DEFAULT",
+                        "style": {
+                         //    "bodyColor": shadeColor("${config.theme_color}",+40),
+                             "themeBackgroundColor": "${config.theme_color}",
+                             "themeColor": getBodyColor("${config.theme_color}"),
+                             "headerBackgroundColor": "${config.theme_color}",
+                             "headerColor": getBodyColor("${config.theme_color}")
+                        },
                         "data": {
                         "orderId": "${params['ORDER_ID']}", /* update order id */
                         "token": "${body.body.txnToken}", /* update token value */
@@ -232,9 +285,12 @@ module.exports = function (app, callbacks) {
                         },
                         "handler": {
                           "notifyMerchant": function(eventName,data){
-                            console.log("notifyMerchant handler function called");
-                            console.log("eventName => ",eventName);
-                            console.log("data => ",data);
+                           // console.log("notifyMerchant handler function called");
+                          //  console.log("eventName => ",eventName);
+                         //   console.log("data => ",data);
+                            if(eventName == "APP_CLOSED"){
+                                failTxn(eventName)
+                            }
                           } 
                         }
                       };
@@ -246,7 +302,8 @@ module.exports = function (app, callbacks) {
                                   // after successfully updating configuration, invoke JS Checkout
                                   window.Paytm.CheckoutJS.invoke();
                               }).catch(function onError(error){
-                                  console.log("error => ",error);
+                              //    console.log("error => ",error);
+                                  failTxn(error.message)
                               });
                           });
                       } 
