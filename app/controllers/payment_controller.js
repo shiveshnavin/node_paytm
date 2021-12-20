@@ -5,6 +5,8 @@ var Transaction;
 var IDLEN = 10;
 var nodeBase64 = require('nodejs-base64-converter');
 var RazorPay = require('razorpay');
+const PaytmChecksum = require('./checksum/PaytmChecksum.js');
+
 
 function sanitizeRequest(body) {
 
@@ -114,24 +116,90 @@ module.exports = function (app, callbacks) {
 
             if (config.paytm_url) {
 
+                let paytmJsCheckouHtml = `<html>
+                    <head>
+                    
+                    </head>
+                    </html>`
 
-                checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
-
-
-                    var txn_url = config.paytm_url + "/theia/processTransaction"; // for staging
-
-                    // console.log(checksum)
-                    var form_fields = "";
-                    for (var x in params) {
-                        form_fields += "<input type='hidden' name='" + x + "' value='" + params[x] + "' >";
+                let initTxnbody = {
+                    "requestType": "Payment",
+                    "mid": params['MID'],
+                    "websiteName": params['WEBSITE'],
+                    "orderId": params['ORDER_ID'],
+                    "callbackUrl": params['CALLBACK_URL'],
+                    "txnAmount": {
+                        "value": params['TXN_AMOUNT'],
+                        "currency": params['CURRENCY'] || "INR",
+                    },
+                    "userInfo": {
+                        "custId": params['CUST_ID'],
+                        "mobile": params['MOBILE_NO'],
+                        "firstName": params['NAME'],
+                        "email": params['EMAIL']
                     }
-                    form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
+                };
+                let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), config.KEY)
+                let initTxnUrl = config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
 
-                    res.writeHead(200, { 'Content-Type': 'text/html' });
-                    res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1></center><form method="post" action="' + txn_url + '" name="f1">' + form_fields + '</form><script type="text/javascript">document.f1.submit();</script></body></html>');
-                    res.end();
+                request.post(
+                    initTxnUrl,
+                    {
+                        json: {
+                            "body": initTxnbody,
+                            "head": {
+                                "signature": checksum
+                            }
+                        }
+                    },
+                    function (error, response, body) {
 
-                });
+                        if (!error &&
+                            response.statusCode == 200 &&
+                            body.body &&
+                            body.body.resultInfo &&
+                            body.body.resultInfo.resultStatus == "S") {
+
+                            return res.send(body)
+
+                        }
+                        else {
+                            console.log('ERROR:::', error, '\n', body);
+                            res.status(500)
+                            var form_fields = "";
+                            let errorResp = {
+                                TXNID: "na",
+                                STATUS: "TXN_FAILURE",
+                                CANCELLED: "cancelled",
+                                ORDERID: params["ORDER_ID"]
+                            }
+                            for (var x in errorResp) {
+                                form_fields += "<input type='hidden' name='" + x + "' value='" + errorResp[x] + "' >";
+                            }
+                            form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
+
+                            res.writeHead(200, { 'Content-Type': 'text/html' });
+                            res.write(`<html>
+
+                                        <head>
+                                            <title>Merchant Checkout Error</title>
+                                        </head>
+                                        
+                                        <body>
+                                            <center>
+                                                <h1>Something went wrong. Please wait you will be redirected automatically...</h1>
+                                            </center>
+                                            <form method="post" action="${params['CALLBACK_URL']}" name="f1">${form_fields}</form>
+                                            <script type="text/javascript">document.f1.submit();</script>
+                                        </body>
+                            
+                            </html>`);
+                            res.end();
+
+                        }
+                    }
+                );
+
             }
             else if (config.razor_url) {
 
@@ -287,7 +355,7 @@ module.exports = function (app, callbacks) {
 
                         let orderId;
                         if (config.paytm_url) {
-                            orderId = makeid(config.id_length || IDLEN)
+                            orderId = "pay_" + makeid(config.id_length || IDLEN)
                             onOrder(orderId)
                         }
                         else if (config.razor_url) {
@@ -359,6 +427,10 @@ module.exports = function (app, callbacks) {
         if (config.paytm_url) {
             var checksumhash = req.body.CHECKSUMHASH;
             result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
+            if (req.body.STATUS == 'TXN_FAILURE' && req.body.CANCELLED == "cancelled" && req.body.TXNID) {
+                isCancelled = true;
+            }
+
         }
         else if (config.razor_url) {
 
@@ -437,7 +509,7 @@ module.exports = function (app, callbacks) {
 
                 let id;
                 if (config.paytm_url) {
-                    id = makeid(config.id_length || IDLEN)
+                    id = "pay_" + makeid(config.id_length || IDLEN)
                 }
                 else if (config.razor_url) {
 

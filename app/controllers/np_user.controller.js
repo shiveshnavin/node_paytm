@@ -58,7 +58,7 @@ module.exports = function (app, callbacks) {
 
         //  console.log("User New : ",userData.name);
 
-        userData.id = makeid(IDLEN);
+        userData.id = "user_"+makeid(IDLEN);
         var userTask = new User(userData);
         userTask.save()
           .then(user => {
