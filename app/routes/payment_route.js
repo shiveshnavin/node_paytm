@@ -54,13 +54,10 @@ module.exports = (app, express, callbacks) => {
     app.use("/" + config.path_prefix, express.static(path.join(__dirname, '../../public')));
     app.use('/' + config.path_prefix, router);
 
-    router.all('/', function (req, res) {
-        res.send({ message: packageInfo.description, developer: packageInfo.author, version: packageInfo.version })
-
-    });
+    router.all('/', pc.init);
+    router.all('/init', pc.init);
 
     router.all('/home', pc.home)
-    router.all('/init', pc.init)
     router.all('/callback', pc.callback)
     router.all('/api/status', pc.status)
     router.all('/api/createTxn', pc.createTxn)

@@ -15,14 +15,17 @@ module.exports = function (app, callbacks) {
   var module = {};
   var config = (app.get('np_config'))
 
+  let usingMultiDbOrm = false;
   if (config.db_url) {
     User = require('../models/np_user.model.js');
+    usingMultiDbOrm = false;
   } else if (app.multidborm) {
     User = require('../models/np_multidbplugin.js')('npusers',app.multidborm);
     User.db=app.multidborm;
     User.modelname='npusers'
     User.idFieldName='id'
     app.NPUser = User;
+    usingMultiDbOrm = true;
   }
   module.create = (userData, cb) => {
 
@@ -69,7 +72,7 @@ module.exports = function (app, callbacks) {
 
       }
 
-    },User);
+    },usingMultiDbOrm ? User : undefined);
 
   };
   return module;

@@ -21,14 +21,19 @@ module.exports = function (app, callbacks) {
     if (config.razor_url)
         var razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
 
+    let usingMultiDbOrm = false;
     if (config.db_url) {
         Transaction = require('../models/np_transaction.model.js');
+        usingMultiDbOrm = false;
+
     } else if (app.multidborm) {
         Transaction = require('../models/np_multidbplugin.js')('nptransactions', app.multidborm);
         Transaction.db = app.multidborm;
         Transaction.modelname = 'nptransactions'
         Transaction.idFieldName = 'orderId'
         app.NPTransaction = Transaction;
+        usingMultiDbOrm = true;
+
     }
 
     var module = {};
@@ -246,7 +251,7 @@ module.exports = function (app, callbacks) {
 
                             onTxn(objForUpdate);
 
-                        }, Transaction);
+                        }, usingMultiDbOrm ? Transaction : undefined);
 
 
 
@@ -412,7 +417,7 @@ module.exports = function (app, callbacks) {
                     }
                 });
 
-            }, Transaction)
+            }, usingMultiDbOrm ? Transaction : undefined)
 
         }
         else {
@@ -575,7 +580,7 @@ module.exports = function (app, callbacks) {
             }
 
 
-        }, Transaction);
+        }, usingMultiDbOrm ? Transaction : undefined);
 
 
     }
