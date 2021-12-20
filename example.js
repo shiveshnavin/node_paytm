@@ -24,6 +24,7 @@ app.set('np_config', {
     "INDUSTRY_TYPE_ID":"Retail",
     "homepage":"/",
     "path_prefix":"_pay",
+    "theme_color":"#231530",
     "db_url":MONGOURL // Remove this property in case you want to use multidborm
 });
 
