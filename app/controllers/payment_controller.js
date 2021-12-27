@@ -108,7 +108,7 @@ module.exports = function (app, callbacks) {
             params['ORDER_ID'] = req.body.ORDER_ID;
             params['CUST_ID'] = req.body.CUST_ID;
             params['TXN_AMOUNT'] = req.body.TXN_AMOUNT;
-            params['CALLBACK_URL'] = req.body.CALLBACK_URL;
+            params['CALLBACK_URL'] = req.body.CALLBACK_URL + "?order_id="+req.body.ORDER_ID;
             params['EMAIL'] = req.body.EMAIL;
             params['MOBILE_NO'] = req.body.MOBILE_NO;
             params['PRODUCT_NAME'] = req.body.PRODUCT_NAME;
@@ -524,7 +524,7 @@ module.exports = function (app, callbacks) {
 
                             razorPayInstance.orders.create(options, function (err, order) {
                                 if (err) {
-                                    res.send({ message: "An error occurred ! " + err.message })
+                                    res.send({ message: "An error occurred ! " + err.description })
                                     return;
                                 }
                                 orderId = order.id
@@ -606,7 +606,7 @@ module.exports = function (app, callbacks) {
                     req.body.razorpay_order_id = orderId
                 }
                 req.body.STATUS = 'TXN_FAILURE'
-                req.body.ORDERID = req.body.razorpay_order_id
+                req.body.ORDERID = req.body.razorpay_order_id || req.query.order_id
                 isCancelled = true;
             }
         }
