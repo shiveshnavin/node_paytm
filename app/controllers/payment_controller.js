@@ -6,6 +6,7 @@ var IDLEN = 10;
 var nodeBase64 = require('nodejs-base64-converter');
 var RazorPay = require('razorpay');
 const PaytmChecksum = require('./checksum/PaytmChecksum.js');
+const { stat } = require('fs');
 
 
 function sanitizeRequest(body) {
@@ -574,6 +575,44 @@ module.exports = function (app, callbacks) {
 
     }
 
+    function updateTransaction(req, res) {
+        var myquery = { orderId: req.body.ORDERID };
+
+        Transaction.findOne(myquery, function (err, objForUpdate) {
+
+            if (err) {
+                res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
+                return;
+            }
+            if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING")) {
+                res.send({ message: "Transaction already processed", status: objForUpdate.status, ORDERID: objForUpdate.orderId, TXNID: objForUpdate.TXNID, TXNID: req.body.TXNID })
+                return;
+            }
+            if (req.body.status == "paid" && !req.body.STATUS) {
+                req.body.STATUS = "TXN_SUCCESS"
+            }
+            objForUpdate.status = req.body.STATUS;
+            objForUpdate.TXNID = req.body.TXNID;
+            objForUpdate.extra = JSON.stringify(req.body);
+
+            var newvalues = { $set: objForUpdate };
+            Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
+
+                if (err) {
+                    res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
+                }
+                else {
+
+                    if (callbacks !== undefined)
+                        callbacks.onFinish(req.body.ORDERID, req.body);
+                    objForUpdate.readonly = "readonly"
+                    objForUpdate.action = config.homepage
+                    res.render(vp + "result.hbs", objForUpdate);
+                }
+            });
+
+        }, usingMultiDbOrm ? Transaction : undefined)
+    }
 
     module.callback = (req, res) => {
 
@@ -617,37 +656,7 @@ module.exports = function (app, callbacks) {
 
         if (result || isCancelled) {
 
-            var myquery = { orderId: req.body.ORDERID };
-            Transaction.findOne(myquery, function (err, objForUpdate) {
-
-                if (err) {
-                    res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
-                    return;
-                }
-                if (req.body.status == "paid" && !req.body.STATUS) {
-                    req.body.STATUS = "TXN_SUCCESS"
-                }
-                objForUpdate.status = req.body.STATUS;
-                objForUpdate.TXNID = req.body.TXNID;
-                objForUpdate.extra = JSON.stringify(req.body);
-
-                var newvalues = { $set: objForUpdate };
-                Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
-
-                    if (err) {
-                        res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
-                    }
-                    else {
-
-                        if (callbacks !== undefined)
-                            callbacks.onFinish(req.body.ORDERID, req.body);
-                        objForUpdate.readonly = "readonly"
-                        objForUpdate.action = config.homepage
-                        res.render(vp + "result.hbs", objForUpdate);
-                    }
-                });
-
-            }, usingMultiDbOrm ? Transaction : undefined)
+            updateTransaction(req, res);
 
         }
         else {
@@ -670,17 +679,36 @@ module.exports = function (app, callbacks) {
                     req.body.payload.payment.entity) {
 
                     let entity = req.body.payload.payment.entity;
-                    let razorpay_order_id = entity.id;
-                    let razorpay_payment_id = entity.order_id;
+                    let razorpay_order_id = entity.order_id;
+                    let razorpay_payment_id = entity.id;
                     let status = entity.status;
+                    let event = req.body.event;
                     console.log(`Razorpay webhook payment order=${razorpay_order_id} payid=${razorpay_payment_id} status=${status}`)
 
                     let reqBody = req.rawBody, signature = req.headers["x-razorpay-signature"];
-                    console.log(RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET));
+
                     result = RazorPay.validateWebhookSignature(reqBody, req.headers['x-razorpay-signature'], config.SECRET)
                     req.signatureVerified = result;
-                    // module.callback(req, res);
-                    res.sendStatus(200)
+                    if (true) {
+                        if (event == events[0]) {
+                            req.body.STATUS = "TXN_SUCCESS";
+                        }
+                        else if (event == events[1]) { //pending
+                            req.body.STATUS = "TXN_PENDING";
+                        }
+                        else { // failed
+                            req.body.STATUS = "TXN_FAILURE";
+                        }
+                        req.body.ORDERID = razorpay_order_id;
+                        req.body.TXNID = razorpay_payment_id;
+                        setTimeout(() => {
+                            updateTransaction(req, res)
+                        }, 3000)
+                    }
+                    else {
+                        res.status(401)
+                        res.send({ message: "Invalid Rzpay signature" })
+                    }
                 }
                 else {
                     res.status(400)
