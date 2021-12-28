@@ -49,16 +49,21 @@ module.exports = (app, express, callbacks) => {
 
     app.set('view engine', 'handlebars');
 
+    let saveRawBody = function (req, res, buf, encoding) {      
+        req.rawBody = buf.toString();
+    }
     app.use(bodyParser.urlencoded({ extended: true }))
-    app.use(bodyParser.json())
+    app.use(bodyParser.json({ verify: saveRawBody }))
+
     app.use("/" + config.path_prefix, express.static(path.join(__dirname, '../../public')));
     app.use('/' + config.path_prefix, router);
 
     router.all('/', pc.init);
     router.all('/init', pc.init);
 
-    router.all('/home', pc.home)
+    // router.all('/home', pc.home)
     router.all('/callback', pc.callback)
+    router.all('/api/webhook', pc.webhook)
     router.all('/api/status', pc.status)
     router.all('/api/createTxn', pc.createTxn)
 

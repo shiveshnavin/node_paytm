@@ -202,6 +202,25 @@ var User=PayTMPG.User;
 
 ```
 
+### Webhooks
+
+Webhooks can issued at at `/_pay/api/webhook` and are useful for payments captured late.
+
+If you are using `bodyparser` , make sure to remove these from your express app since the body parsers will be already added with the library .
+```
+    Comment these if present in your app
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
+```
+
+#### For razorpay webhook
+Make sure to use the same secret in your webhook as the merchant secret.
+https://razorpay.com/docs/webhooks/
+
+#### For paytm
+Nothing extra needed
+https://developer.paytm.com/docs/callback-and-webhook/?ref=callbackWebhook
+
 
 
 License : GPL

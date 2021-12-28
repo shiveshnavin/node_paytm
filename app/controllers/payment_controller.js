@@ -108,7 +108,7 @@ module.exports = function (app, callbacks) {
             params['ORDER_ID'] = req.body.ORDER_ID;
             params['CUST_ID'] = req.body.CUST_ID;
             params['TXN_AMOUNT'] = req.body.TXN_AMOUNT;
-            params['CALLBACK_URL'] = req.body.CALLBACK_URL + "?order_id="+req.body.ORDER_ID;
+            params['CALLBACK_URL'] = req.body.CALLBACK_URL + "?order_id=" + req.body.ORDER_ID;
             params['EMAIL'] = req.body.EMAIL;
             params['MOBILE_NO'] = req.body.MOBILE_NO;
             params['PRODUCT_NAME'] = req.body.PRODUCT_NAME;
@@ -656,6 +656,42 @@ module.exports = function (app, callbacks) {
 
         }
 
+    }
+
+    module.webhook = (req, res) => {
+        if (config.paytm_url) {
+            module.callback(req, res)
+        }
+        else if (config.razor_url) {
+            let events = ["payment.captured", "payment.pending", "payment.failed"]
+            if (req.body.event && events.indexOf(req.body.event) > -1) {
+                if (req.body.payload &&
+                    req.body.payload.payment &&
+                    req.body.payload.payment.entity) {
+
+                    let entity = req.body.payload.payment.entity;
+                    let razorpay_order_id = entity.id;
+                    let razorpay_payment_id = entity.order_id;
+                    let status = entity.status;
+                    console.log(`Razorpay webhook payment order=${razorpay_order_id} payid=${razorpay_payment_id} status=${status}`)
+
+                    let reqBody = req.rawBody, signature = req.headers["x-razorpay-signature"];
+                    console.log(RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET));
+                    result = RazorPay.validateWebhookSignature(reqBody, req.headers['x-razorpay-signature'], config.SECRET)
+                    req.signatureVerified = result;
+                    // module.callback(req, res);
+                    res.sendStatus(200)
+                }
+                else {
+                    res.status(400)
+                    res.send({ message: "Invalid Payload" })
+                }
+            }
+            else {
+                res.status(400)
+                res.send({ message: "Unsupported event : " + req.body.event })
+            }
+        }
     }
 
     module.createTxn = (req, res) => {
