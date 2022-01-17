@@ -60,8 +60,18 @@
     {{/if}}
 
     <li>
-      <button type="submit" class="button">{{BUTTON}}</button>
+      <button id="show_button" type="submit" class="button">{{BUTTON}}</button>
     </li>
+
+  <script>
+          var button = document.getElementById('show_button')
+          button.addEventListener('click',hideshow,false);
+
+          function hideshow() {
+              document.getElementById('show_button').style.display = 'none'; 
+          }   
+    </script>
+
   </ul>
 
 
