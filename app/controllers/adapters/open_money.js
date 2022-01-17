@@ -224,7 +224,7 @@ class OpenMoney {
                                 req.body.TXNID = paymentid;
                             }
                             else {
-                                let status = ""
+                                let status = "INITIATED"
                                 if (payment_data.status == "captured" ||
                                     payment_data.status == "late_authorized") {
                                     status = 'TXN_SUCCESS'
