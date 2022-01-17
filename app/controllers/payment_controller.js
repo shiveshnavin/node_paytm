@@ -794,6 +794,9 @@ module.exports = function (app, callbacks) {
                     let order = await razorPayInstance.orders.create(options);
                     id = order.id;
                 }
+                else if(config.open_money_url){
+                    id = "pay_" + makeid(config.id_length || IDLEN)
+                }
 
                 var txnTask = new Transaction({
                     id: id,
