@@ -654,7 +654,6 @@ module.exports = function (app, callbacks) {
     }
 
     module.callback = async (req, res) => {
-        return res.end('Skip')
 
         var result = false;
         let isCancelled = false;

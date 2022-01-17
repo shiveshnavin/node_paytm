@@ -6,6 +6,7 @@
 Support for : 
  - Paytm
  - RazorPay
+ - Open Money
  
 Does all the hardwork for you while integrating payments in any express app. Comes with inbuilt UI and REST APIs for lightning fast development and prototyping .
 
@@ -22,7 +23,7 @@ Example App Sourcecode : https://github.com/shiveshnavin/payment-gateway-example
 ### Requirments
 
 1. MongoDB / Firestore / SQlite
-2. Your Paytm Credentials 
+2. Your Merchant Credentials 
 3. Express . This only works with NodeJS express server
 
 You can get your paytm credentials here
@@ -78,7 +79,24 @@ homepage : Homepage of your website where user can go after payment confirmation
 path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
 db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
 id_length: Length of Order ID and User ID
+
 ```
+
+### For Open Money
+In case you want to use Open Money https://app.open.money/settings/developer-api/api . Use the below configuration
+```
+host_url : Host URL of your server . This will be used to redirect user after payment
+view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
+open_money_url : SANDBOX https://sandbox-icp-api.bankopen.co/api OR LIVE https://icp-api.bankopen.co/api
+KEY : Your generated API Key
+SECRET : Your API secret
+homepage : Homepage of your website where user can go after payment confirmation page
+path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
+db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
+id_length: Length of Order ID and User ID (Optional)
+
+```
+
 
 Place these 2 statements in your main nodejs file before calling app.listen(..)
 
@@ -206,13 +224,6 @@ var User=PayTMPG.User;
 
 Webhooks can issued at at `/_pay/api/webhook` and are useful for payments captured late.
 
-If you are using `bodyparser` , make sure to remove these from your express app since the body parsers will be already added with the library .
-```
-    Comment these if present in your app
-    app.use(bodyParser.json());
-    app.use(bodyParser.urlencoded({ extended: true }));
-```
-
 #### For razorpay webhook
 Make sure to use the same secret in your webhook as the merchant secret.
 https://razorpay.com/docs/webhooks/
@@ -221,6 +232,9 @@ https://razorpay.com/docs/webhooks/
 Nothing extra needed
 https://developer.paytm.com/docs/callback-and-webhook/?ref=callbackWebhook
 
+#### For Open Money
+Nothing extra needed
+https://docs.bankopen.com/reference/webhook-url
 
 
 License : GPL
