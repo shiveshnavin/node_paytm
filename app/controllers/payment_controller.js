@@ -943,11 +943,11 @@ module.exports = function (app, callbacks) {
                         result.TXNID = result.id
                         onStatusUpdate(result)
                     }
-                    else if (result.status == 'failed' || result.status == 'cancelled') {
-                        result.STATUS = 'TXN_FAILED'
-                        result.TXNID = result.id
-                        onStatusUpdate(result)
-                    }
+                    // else if (result.status == 'failed' || result.status == 'cancelled') {
+                    //     result.STATUS = 'TXN_FAILED'
+                    //     result.TXNID = result.id
+                    //     onStatusUpdate(result)
+                    // }
                     else {
                         res.send(orderData);
                     }

@@ -23,7 +23,7 @@ class OpenMoney {
                 "currency": params['CURRENCY'] || "INR",
                 "name": params['NAME'],
                 "email_id": params['EMAIL'],
-                "contact_number": params['MOBILE_NO'],
+                "contact_number": ("" + params['MOBILE_NO']).replace("+91", ""),
                 "mtx": params['ORDER_ID']
             }
             create_payment_token(open_txn,
@@ -232,17 +232,17 @@ class OpenMoney {
                                 else if (payment_data.status == "pending") {
                                     status = 'TXN_PENDING'
                                 }
-                                else {
-                                    status = 'TXN_FAILURE'
-                                }
+                                // else {
+                                //     status = 'TXN_FAILURE'
+                                // }
 
                                 if (status != 'TXN_SUCCESS') {
                                     if (req.body.status == "paid" || req.body.status == 'captured') {
                                         status = 'TXN_SUCCESS'
                                     }
-                                    else if (req.body.status == 'failed') {
-                                        status = 'TXN_FAILURE'
-                                    }
+                                    // else if (req.body.status == 'failed') {
+                                    //     status = 'TXN_FAILURE'
+                                    // }
                                     else if (req.body.status == 'pending') {
                                         status = 'TXN_PENDING'
                                     }
