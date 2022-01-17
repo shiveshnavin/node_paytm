@@ -185,7 +185,7 @@ class OpenMoney {
     processWebhook(req, res, updateTransaction) {
         let config = this.config;
         let events = [
-            "payment_captured", "payment_pending", 
+            "payment_captured", "payment_pending",
             "payment_failed",
             "payment_cancelled"]
         if (req.body.event && events.indexOf(req.body.event) > -1) {
@@ -282,11 +282,11 @@ class OpenMoney {
         })
     }
 
-    renderProcessingPage(params, pmttoken, res) {
+    renderProcessingPage(params, pmttoken, res, loadingSVG) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.write(`<html><head><title>Merchant Checkout Page</title>
         <script src="${this.config.script_url}"></script>
-        </head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${pmttoken.html}<br></center><script>triggerLayer();</script></body></html>`);
+        </head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${pmttoken.html}<br><br>${loadingSVG}</center><script>triggerLayer();</script></body></html>`);
         res.end();
     }
 
