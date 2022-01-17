@@ -5,8 +5,10 @@ var Transaction;
 var IDLEN = 10;
 var nodeBase64 = require('nodejs-base64-converter');
 var RazorPay = require('razorpay');
+var OpenMoney = require('./adapters/open_money')
 const PaytmChecksum = require('./checksum/PaytmChecksum.js');
 const { stat } = require('fs');
+const { config } = require('process');
 
 
 function sanitizeRequest(body) {
@@ -21,8 +23,14 @@ module.exports = function (app, callbacks) {
     var config = (app.get('np_config'))
     var useController = require('./np_user.controller.js')(app, callbacks);
 
+    var razorPayInstance;
+    var openMoneyInstance = new OpenMoney(config);
+
     if (config.razor_url)
-        var razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+        razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+    if (config.open_money_url) {
+        openMoneyInstance = new OpenMoney(config);
+    }
 
     let usingMultiDbOrm = false;
     if (config.db_url) {
@@ -358,8 +366,6 @@ module.exports = function (app, callbacks) {
             }
             else if (config.razor_url) {
 
-
-
                 let fail = `<div style="display:none">
                 
                 <form method="post" action="${params['CALLBACK_URL']}" id="fail">
@@ -401,6 +407,29 @@ module.exports = function (app, callbacks) {
                 res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${html}<br>${fail}</center></body></html>`);
                 res.end();
 
+            }
+            else if (config.open_money_url) {
+                try {
+                    let pmttoken = await openMoneyInstance.generatePaymentToken(params);
+                    openMoneyInstance.renderProcessingPage(params, pmttoken, res);
+
+                    var myquery = { orderId: params['ORDER_ID'] };
+                    Transaction.findOne(myquery, function (err, objForUpdate) {
+
+                        objForUpdate.extra = JSON.stringify({
+                            layer_pay_token_id: pmttoken.tokenid
+                        });
+
+                        var newvalues = { $set: objForUpdate };
+                        Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
+                            let status = 'Updated TXNID'
+                        });
+
+                    }, usingMultiDbOrm ? Transaction : undefined)
+
+                } catch (e) {
+                    openMoneyInstance.renderError(params, e, res)
+                }
             }
             if (callbacks !== undefined)
                 callbacks.onStart(params['ORDER_ID'], params);
@@ -460,6 +489,8 @@ module.exports = function (app, callbacks) {
                             checksum_lib.genchecksum(params, config.KEY, showConfirmation);
                         else if (config.razor_url) {
                             showConfirmation()
+                        } else if (config.open_money_url) {
+                            showConfirmation()
                         }
 
                     };
@@ -470,9 +501,9 @@ module.exports = function (app, callbacks) {
 
 
                         var myquery = { orderId: req.body.ORDER_ID };
-                        Transaction.findOne(myquery, function (err, objForUpdate) {
+                        Transaction.findOne(myquery, function (err, orderData) {
 
-                            onTxn(objForUpdate);
+                            onTxn(orderData);
 
                         }, usingMultiDbOrm ? Transaction : undefined);
 
@@ -532,6 +563,10 @@ module.exports = function (app, callbacks) {
                                 onOrder(orderId)
                             })
                         }
+                        else if (config.open_money_url) {
+                            orderId = "pay_" + makeid(config.id_length || IDLEN)
+                            onOrder(orderId)
+                        }
 
 
 
@@ -585,7 +620,11 @@ module.exports = function (app, callbacks) {
                 return;
             }
             if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING")) {
-                res.send({ message: "Transaction already processed", status: objForUpdate.status, ORDERID: objForUpdate.orderId, TXNID: objForUpdate.TXNID, TXNID: req.body.TXNID })
+                objForUpdate.readonly = "readonly"
+                objForUpdate.action = config.homepage
+                res.render(vp + "result.hbs", objForUpdate);
+                console.log("Transaction already processed ", req.body.ORDERID)
+                // res.send({ message: "Transaction already processed", status: objForUpdate.status, ORDERID: objForUpdate.orderId, TXNID: objForUpdate.TXNID, TXNID: req.body.TXNID })
                 return;
             }
             if (req.body.status == "paid" && !req.body.STATUS) {
@@ -614,7 +653,8 @@ module.exports = function (app, callbacks) {
         }, usingMultiDbOrm ? Transaction : undefined)
     }
 
-    module.callback = (req, res) => {
+    module.callback = async (req, res) => {
+        return res.end('Skip')
 
         var result = false;
         let isCancelled = false;
@@ -649,6 +689,15 @@ module.exports = function (app, callbacks) {
                 isCancelled = true;
             }
         }
+        else if (config.open_money_url) {
+            let openRest = await openMoneyInstance.verifyResult(req);
+            result = true;
+            req.body.STATUS = openRest.STATUS
+            req.body.TXNID = openRest.TXNID
+            req.body.ORDERID = openRest.ORDERID || req.query.order_id
+            req.body.extras = openRest.data
+        }
+
 
         //console.log("Checksum Result => ", result, "\n");
         console.log("NodePayTMPG::Transaction => ", req.body.ORDERID, req.body.STATUS);
@@ -689,7 +738,7 @@ module.exports = function (app, callbacks) {
 
                     result = RazorPay.validateWebhookSignature(reqBody, req.headers['x-razorpay-signature'], config.SECRET)
                     req.signatureVerified = result;
-                    if (true) {
+                    if (result) {
                         if (event == events[0]) {
                             req.body.STATUS = "TXN_SUCCESS";
                         }
@@ -719,6 +768,9 @@ module.exports = function (app, callbacks) {
                 res.status(400)
                 res.send({ message: "Unsupported event : " + req.body.event })
             }
+        }
+        else if (config.open_money_url) {
+            openMoneyInstance.processWebhook(req, res, updateTransaction)
         }
     }
 
@@ -788,15 +840,18 @@ module.exports = function (app, callbacks) {
 
     module.status = (req, res) => {
 
+        if (!req.body.ORDER_ID && req.query.ORDER_ID) {
+            req.body.ORDER_ID = req.query.ORDER_ID
+        }
         var myquery = { orderId: req.body.ORDER_ID };
-        Transaction.findOne(myquery, async function (err, objForUpdate) {
+        Transaction.findOne(myquery, async function (err, orderData) {
 
 
             if (err) {
                 res.send(err)
                 return
             }
-            if (objForUpdate.status === "INITIATED") {
+            if (orderData.status === "INITIATED") {
 
                 var params = {}
                 params["MID"] = config.MID;
@@ -804,10 +859,10 @@ module.exports = function (app, callbacks) {
 
                 async function onStatusUpdate(paytmResponse) {
                     if (paytmResponse.TXNID.length > 4) {
-                        objForUpdate.status = paytmResponse.STATUS;
-                        objForUpdate.extra = JSON.stringify(paytmResponse);
+                        orderData.status = paytmResponse.STATUS;
+                        orderData.extra = JSON.stringify(paytmResponse);
 
-                        var newvalues = { $set: objForUpdate };
+                        var newvalues = { $set: orderData };
                         Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
 
                             if (err) {
@@ -815,13 +870,13 @@ module.exports = function (app, callbacks) {
                             }
                             else {
                                 if (callbacks !== undefined)
-                                    callbacks.onFinish(req.body.ORDER_ID, objForUpdate);
+                                    callbacks.onFinish(req.body.ORDER_ID, orderData);
                                 res.send(paytmResponse)
                             }
                         });
                     }
                     else {
-                        res.send(objForUpdate)
+                        res.send(orderData)
 
                     }
                 }
@@ -864,13 +919,41 @@ module.exports = function (app, callbacks) {
                         onStatusUpdate(result)
                     }
                     else {
-                        res.send(objForUpdate);
+                        res.send(orderData);
+                    }
+                }
+                else if (config.open_money_url) {
+                    let extras = JSON.parse(orderData.extra)
+                    if (!extras || !extras.layer_pay_token_id) {
+                        res.status(500)
+                        return res.send({ message: 'An unexpected error occured. No payment token exists' })
+                    }
+                    let result = await openMoneyInstance.getPaymentStatus(extras.layer_pay_token_id)
+                    result = JSON.parse(result)
+                    result.ORDERID = req.body.ORDER_ID
+                    if (result.status == 'paid' || result.status == 'captured') {
+                        result.STATUS = 'TXN_SUCCESS'
+                        result.TXNID = result.id
+                        onStatusUpdate(result)
+                    }
+                    else if (result.status == 'pending' || result.status == 'attempted') {
+                        result.STATUS = 'TXN_PENDING'
+                        result.TXNID = result.id
+                        onStatusUpdate(result)
+                    }
+                    else if (result.status == 'failed' || result.status == 'cancelled') {
+                        result.STATUS = 'TXN_FAILED'
+                        result.TXNID = result.id
+                        onStatusUpdate(result)
+                    }
+                    else {
+                        res.send(orderData);
                     }
                 }
 
             }
             else {
-                res.send(objForUpdate);
+                res.send(orderData);
             }
 
 
