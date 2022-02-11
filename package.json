@@ -30,7 +30,7 @@
     "body-parser": "^1.18.3",
     "crypto": "^1.0.1",
     "express": "^4.16.4",
-    "express-handlebars": "^3.0.2",
+    "express-handlebars": "^5.3.1",
     "mongoose": "^5.4.16",
     "multi-db-orm": "^1.0.9",
     "nodejs-base64-converter": "^1.0.5",
