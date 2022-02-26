@@ -65,6 +65,7 @@ module.exports = (app, express, callbacks) => {
     router.all('/callback', pc.callback)
     router.all('/api/webhook', pc.webhook)
     router.all('/api/status', pc.status)
+    router.all('/api/createTxn/token', pc.createTxnToken)
     router.all('/api/createTxn', pc.createTxn)
 
 

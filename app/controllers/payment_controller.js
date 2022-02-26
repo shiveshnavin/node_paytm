@@ -216,6 +216,18 @@ module.exports = function (app, callbacks) {
                             body.body.resultInfo &&
                             body.body.resultInfo.resultStatus == "S") {
 
+                            let paytmJsToken = {}
+                            paytmJsToken.CALLBACK_URL = params['CALLBACK_URL']
+                            paytmJsToken.ORDERID = params['ORDER_ID']
+                            paytmJsToken.ORDER_ID = params['ORDER_ID']
+                            paytmJsToken.CANCELLED = "cancelled"
+                            paytmJsToken.TOKEN = body.body.txnToken
+                            paytmJsToken.TXN_AMOUNT = params['TXN_AMOUNT']
+                            paytmJsToken.MID = params['MID']
+                            paytmJsToken.CALLBACK_URL = params['CALLBACK_URL']
+                            paytmJsToken.CALLBACK_URL = params['CALLBACK_URL']
+
+
 
                             let paytmJsCheckouHtml = `<html>
                 <head>
@@ -324,6 +336,9 @@ module.exports = function (app, callbacks) {
 
                 </body>
                 </html>`
+                            if (res.token) {
+                                res.token(paytmJsToken)
+                            }
                             return res.send(paytmJsCheckouHtml)
 
                         }
@@ -341,7 +356,9 @@ module.exports = function (app, callbacks) {
                                 form_fields += "<input type='hidden' name='" + x + "' value='" + errorResp[x] + "' >";
                             }
                             form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
-
+                            if (res.token) {
+                                res.token(undefined)
+                            }
                             res.writeHead(200, { 'Content-Type': 'text/html' });
                             res.write(`<html>
 
@@ -836,6 +853,66 @@ module.exports = function (app, callbacks) {
 
             });
 
+
+
+    };
+
+    module.createTxnToken = (req, res) => {
+
+
+        module.createTxn(req, {
+            send: function (createTxnResult) {
+
+                // console.log(createTxnResult)
+
+                req.body.NAME = createTxnResult.name
+                req.body.EMAIL = createTxnResult.email
+                req.body.MOBILE_NO = createTxnResult.phone
+                req.body.ORDER_ID = createTxnResult.orderId
+                module.init(req, {
+                    render: (renderPath, initResultRender) => {
+                        // console.log(initResultRender)
+                        req.body = initResultRender
+
+                        module.init(req, {
+                            send: (initResult) => {
+
+                            },
+                            status: (status) => {
+                                console.log('status', status)
+
+                            },
+                            token: (tokenData) => {
+                                if (!tokenData) {
+                                    res.status(500)
+                                    res.send('Something went wrong. Please try again later.')
+                                }
+                                else
+                                    {
+                                        tokenData.payurl = createTxnResult.payurl;
+                                        res.send(tokenData)
+                                    }
+                            },
+                            render: (renderPath2, init2ResultRender) => {
+                                console.log('init2ResultRender', init2ResultRender)
+                            },
+                            end: (initResultWrite) => {
+                                console.log('initResultWrite', initResultWrite)
+                            },
+                            write: (initResultWrite) => {
+                                console.log('initResultWrite', initResultWrite)
+                            },
+                            writeHead: (initResultWriteHead) => {
+                                console.log('initResultWriteHead', initResultWriteHead)
+                            }
+
+                        })
+
+                    }
+                })
+            },
+            redirect: res.redirect
+        })
 
 
     };
