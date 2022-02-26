@@ -8,7 +8,7 @@ class OpenMoney {
         npconfig.accesskey = npconfig.KEY
         npconfig.secretkey = npconfig.SECRET
         npconfig.url = npconfig.open_money_url
-        npconfig.script_url = (npconfig.url.indexOf("sandbox") == -1) ? "https://payments.open.money/layer" : "https://sandbox-payments.open.money/layer"
+        npconfig.script_url = (npconfig.url && npconfig.url.indexOf("sandbox") == -1) ? "https://payments.open.money/layer" : "https://sandbox-payments.open.money/layer"
         this.config = npconfig;
 
     }
