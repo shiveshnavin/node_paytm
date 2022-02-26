@@ -193,11 +193,13 @@ module.exports = function (app, callbacks) {
                         "email": params['EMAIL']
                     }
                 };
-                let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), config.KEY)
-                let initTxnUrl = config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
                 if(config.mode){
                     initTxnbody["enablePaymentMode"] =  JSON.parse(config.mode)
                 }
+                
+                let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), config.KEY)
+                let initTxnUrl = config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
+
                 request.post(
                     initTxnUrl,
                     {
