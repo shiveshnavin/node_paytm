@@ -3,6 +3,7 @@
 var crypt = require('./crypt');
 var util = require('util');
 var crypto = require('crypto');
+const PaytmChecksum = require('./PaytmChecksum.js');
 
 //mandatory flag: when it set, only mandatory parameters are added to checksum
 
@@ -27,8 +28,8 @@ function paramsToString(params, mandatoryflag) {
       params[key] = "";
       console.log(e)
     }
-    
-    
+
+
     if (key !== 'CHECKSUMHASH') {
       if (params[key] === 'null') params[key] = '';
       if (!mandatoryflag || mandatoryParams.indexOf(key) !== -1) {
@@ -41,6 +42,9 @@ function paramsToString(params, mandatoryflag) {
 
 
 function genchecksum(params, key, cb) {
+  let checksum = PaytmChecksum.generateSignature(params, key);
+  cb(undefined, checksum)
+  return checksum;
   var data = paramsToString(params);
   crypt.gen_salt(4, function (err, salt) {
     var sha256 = crypto.createHash('sha256').update(data + salt).digest('hex');
@@ -63,6 +67,7 @@ function genchecksumbystring(params, key, cb) {
 }
 
 function verifychecksum(params, key, checksumhash) {
+  return PaytmChecksum.verifySignature(params, key, checksumhash)
   var data = paramsToString(params, false);
 
   //TODO: after PG fix on thier side remove below two lines

@@ -10,6 +10,7 @@ test.js
 *~
 creds.json
 *.db
+paytmtoken.js
 # Runtime data
 pids
 *.pid

@@ -193,10 +193,10 @@ module.exports = function (app, callbacks) {
                         "email": params['EMAIL']
                     }
                 };
-                if(config.mode){
-                    initTxnbody["enablePaymentMode"] =  JSON.parse(config.mode)
+                if (config.mode) {
+                    initTxnbody["enablePaymentMode"] = JSON.parse(config.mode)
                 }
-                
+
                 let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), config.KEY)
                 let initTxnUrl = config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
 
@@ -891,11 +891,10 @@ module.exports = function (app, callbacks) {
                                     res.status(500)
                                     res.send('Something went wrong. Please try again later.')
                                 }
-                                else
-                                    {
-                                        tokenData.payurl = createTxnResult.payurl;
-                                        res.send(tokenData)
-                                    }
+                                else {
+                                    tokenData.payurl = createTxnResult.payurl;
+                                    res.send(tokenData)
+                                }
                             },
                             render: (renderPath2, init2ResultRender) => {
                                 console.log('init2ResultRender', init2ResultRender)
