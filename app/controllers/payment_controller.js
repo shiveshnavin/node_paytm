@@ -676,7 +676,7 @@ module.exports = function (app, callbacks) {
     }
 
     module.callback = async (req, res) => {
-        console.log("request_data ", req.originalUrl, JSON.stringify(req.headers), JSON.stringify(req.body))
+        console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
 
         var result = false;
         let isCancelled = false;
@@ -691,7 +691,7 @@ module.exports = function (app, callbacks) {
                         resolve(paytmResponse)
                     })
                 })
-                result = liveStatus.STATUS == "TXN_SUCCESS";
+                result = liveStatus.STATUS == req.body.STATUS;
             }
             if (req.body.STATUS == 'TXN_FAILURE' && req.body.CANCELLED == "cancelled" && req.body.TXNID) {
                 isCancelled = true;
@@ -752,7 +752,7 @@ module.exports = function (app, callbacks) {
 
 
 
-        console.log("request_data ", req.originalUrl, JSON.stringify(req.headers), JSON.stringify(req.body))
+        console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
 
         if (config.paytm_url) {
             module.callback(req, res)
