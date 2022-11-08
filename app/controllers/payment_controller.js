@@ -676,7 +676,7 @@ module.exports = function (app, callbacks) {
     }
 
     module.callback = async (req, res) => {
-        console.log("request_data ", req.originalUrl, req.body)
+        console.log("request_data ", req.originalUrl, JSON.stringify(req.headers), JSON.stringify(req.body))
 
         var result = false;
         let isCancelled = false;
@@ -741,7 +741,8 @@ module.exports = function (app, callbacks) {
     module.webhook = (req, res) => {
 
 
-        console.log("request_data ", req.originalUrl, req.body)
+
+        console.log("request_data ", req.originalUrl, JSON.stringify(req.headers), JSON.stringify(req.body))
 
         if (config.paytm_url) {
             module.callback(req, res)
