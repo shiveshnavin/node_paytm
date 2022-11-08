@@ -641,7 +641,7 @@ module.exports = function (app, callbacks) {
                 res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                 return;
             }
-            if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING")) {
+            if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING") && objForUpdate.status != ("PENDING")) {
                 objForUpdate.readonly = "readonly"
                 objForUpdate.action = config.homepage
                 res.render(vp + "result.hbs", objForUpdate);
@@ -682,7 +682,17 @@ module.exports = function (app, callbacks) {
         let isCancelled = false;
         if (config.paytm_url) {
             var checksumhash = req.body.CHECKSUMHASH;
-            result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
+            if (checksumhash) {
+                result = checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
+            }
+            else {
+                let liveStatus = await new Promise((resolve, reject) => {
+                    getStatusFromPaytm(req.body, req.body.ORDERID, (paytmResponse) => {
+                        resolve(paytmResponse)
+                    })
+                })
+                result = liveStatus.STATUS == "TXN_SUCCESS";
+            }
             if (req.body.STATUS == 'TXN_FAILURE' && req.body.CANCELLED == "cancelled" && req.body.TXNID) {
                 isCancelled = true;
             }
@@ -971,26 +981,7 @@ module.exports = function (app, callbacks) {
                 }
 
                 if (config.paytm_url) {
-                    checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
-
-                        request.post(
-                            config.paytm_url + "/order/status",
-                            { json: { MID: config.MID, ORDERID: req.body.ORDER_ID, CHECKSUMHASH: checksum, } },
-                            function (error, response, body) {
-
-                                if (!error && response.statusCode == 200) {
-                                    // console.log(body);
-                                    var paytmResponse = JSON.parse(JSON.stringify(body))
-                                    onStatusUpdate(paytmResponse)
-                                }
-                                else {
-                                    console.log('ERROR:::', error, '\n', response);
-                                    res.status(500)
-                                    res.send({ message: "Error Occured !", ORDERID: req.body.ORDER_ID })
-                                }
-                            }
-                        );
-                    });
+                    getStatusFromPaytm(params, req.body.ORDER_ID, onStatusUpdate)
                 }
                 else if (config.razor_url) {
                     let result = await razorPayInstance.orders.fetch(req.body.ORDER_ID)
@@ -1049,6 +1040,27 @@ module.exports = function (app, callbacks) {
         }, usingMultiDbOrm ? Transaction : undefined);
 
 
+    }
+
+    function getStatusFromPaytm(params, orderId, cb) {
+        checksum_lib.genchecksum(params, config.KEY, function (err, checksum) {
+
+            request.post(
+                config.paytm_url + "/order/status",
+                { json: { MID: config.MID, ORDERID: orderId, CHECKSUMHASH: checksum, } },
+                function (error, response, body) {
+
+                    if (!error && response.statusCode == 200) {
+                        var paytmResponse = JSON.parse(JSON.stringify(body))
+                        cb(paytmResponse)
+                    }
+                    else {
+                        console.log('ERROR:::', error, '\n', response);
+                        cb({ message: "Error Occured !", ORDERID: orderId })
+                    }
+                }
+            );
+        });
     }
 
     return module;

@@ -42,9 +42,10 @@ function paramsToString(params, mandatoryflag) {
 
 
 function genchecksum(params, key, cb) {
-  let checksum = PaytmChecksum.generateSignature(params, key);
-  cb(undefined, checksum)
-  return checksum;
+  let checksumPromise = PaytmChecksum.generateSignature(params, key).then(checksum => {
+    cb(undefined, checksum)
+  })
+  return checksumPromise;
   var data = paramsToString(params);
   crypt.gen_salt(4, function (err, salt) {
     var sha256 = crypto.createHash('sha256').update(data + salt).digest('hex');
