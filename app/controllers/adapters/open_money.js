@@ -1,3 +1,4 @@
+const axios = require('axios');
 var crypto = require('crypto');
 const { resolve } = require('path');
 var reqpost = require('request');
@@ -463,22 +464,22 @@ function http_get(route, accesskey, secretkey, baseurl, callback) {
     var options = {
         method: 'GET',
         uri: url,
+        url: url,
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + accesskey + ':' + secretkey
         }
     };
 
-    reqpost(options)
-        .on('response', function (resp) {
-            resp.setEncoding('utf8');
-            resp.on('data', function (chunk) {
-                return callback(chunk);
-            });
-        })
-        .on('error', function (err) {
-            return callback(err);
-        });
+    // console.log('Axios Calling API: ' + url)
+    axios(options).then((d) => {
+        // console.log('Axios Response API: ' + url + " >>> " + JSON.stringify(d.data))
+
+        callback(JSON.stringify(d.data))
+    }).catch((e) => {
+        // console.log('Axios Response API Error. ' + url + " >>> " + e.message)
+        callback("{}")
+    });
 }
 
 function create_hash(data, accesskey, secretkey) {
