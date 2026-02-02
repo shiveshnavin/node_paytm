@@ -6,6 +6,7 @@ var IDLEN = 10;
 var nodeBase64 = require('nodejs-base64-converter');
 var RazorPay = require('razorpay');
 var OpenMoney = require('./adapters/open_money')
+var PayU = require('./adapters/payu')
 const PaytmChecksum = require('./checksum/PaytmChecksum.js');
 const { stat } = require('fs');
 const { config } = require('process');
@@ -76,11 +77,15 @@ module.exports = function (app, callbacks) {
 
     var razorPayInstance;
     var openMoneyInstance = new OpenMoney(config);
+    var payuInstance;
 
     if (config.razor_url)
         razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
     if (config.open_money_url) {
         openMoneyInstance = new OpenMoney(config);
+    }
+    if (config.payu_url) {
+        payuInstance = new PayU(config);
     }
 
     let usingMultiDbOrm = false;
@@ -430,6 +435,10 @@ module.exports = function (app, callbacks) {
                 res.end();
 
             }
+            else if (config.payu_url) {
+                const payuRequest = payuInstance.generatePaymentRequest(params);
+                payuInstance.renderProcessingPage(params, payuRequest, res, loadingSVG);
+            }
             else if (config.open_money_url) {
                 try {
                     let pmttoken = await openMoneyInstance.generatePaymentToken(params);
@@ -511,6 +520,8 @@ module.exports = function (app, callbacks) {
                             checksum_lib.genchecksum(params, config.KEY, showConfirmation);
                         else if (config.razor_url) {
                             showConfirmation()
+                        } else if (config.payu_url) {
+                            showConfirmation()
                         } else if (config.open_money_url) {
                             showConfirmation()
                         }
@@ -587,6 +598,9 @@ module.exports = function (app, callbacks) {
                         }
                         else if (config.open_money_url) {
                             orderId = "pay_" + makeid(config.id_length || IDLEN)
+                            onOrder(orderId)
+                        } else if (config.payu_url) {
+                            orderId = "payu_" + makeid(config.id_length || IDLEN)
                             onOrder(orderId)
                         }
 
@@ -721,6 +735,17 @@ module.exports = function (app, callbacks) {
                 isCancelled = true;
             }
         }
+        else if (config.payu_url) {
+            const payuRest = payuInstance.verifyResult(req);
+            result = payuRest.valid;
+            req.body.STATUS = payuRest.STATUS;
+            req.body.TXNID = payuRest.TXNID;
+            req.body.ORDERID = payuRest.ORDERID || req.query.order_id;
+            req.body.extras = payuRest.data;
+            if (payuRest.isCancelled) {
+                isCancelled = true;
+            }
+        }
         else if (config.open_money_url) {
             let openRest = await openMoneyInstance.verifyResult(req);
             result = true;
@@ -806,6 +831,9 @@ module.exports = function (app, callbacks) {
                 res.send({ message: "Unsupported event : " + req.body.event })
             }
         }
+        else if (config.payu_url) {
+            payuInstance.processWebhook(req, res, updateTransaction)
+        }
         else if (config.open_money_url) {
             openMoneyInstance.processWebhook(req, res, updateTransaction)
         }
@@ -831,6 +859,9 @@ module.exports = function (app, callbacks) {
                     };
                     let order = await razorPayInstance.orders.create(options);
                     id = order.id;
+                }
+                else if (config.payu_url) {
+                    id = "payu_" + makeid(config.id_length || IDLEN)
                 }
                 else if (config.open_money_url) {
                     id = "pay_" + makeid(config.id_length || IDLEN)
@@ -997,6 +1028,28 @@ module.exports = function (app, callbacks) {
                         result.payments = payments;
 
                         onStatusUpdate(result)
+                    }
+                    else {
+                        res.send(orderData);
+                    }
+                }
+                else if (config.payu_url) {
+                    let result = await payuInstance.getPaymentStatus(req.body.ORDER_ID)
+                    if (result && result.transaction_details && result.transaction_details[req.body.ORDER_ID]) {
+                        let txn = result.transaction_details[req.body.ORDER_ID];
+                        let status = 'TXN_FAILURE'
+                        if (txn.status == 'success') {
+                            status = 'TXN_SUCCESS'
+                        }
+                        else if (txn.status == 'pending') {
+                            status = 'TXN_PENDING'
+                        }
+                        onStatusUpdate({
+                            STATUS: status,
+                            ORDERID: req.body.ORDER_ID,
+                            TXNID: txn.mihpayid || txn.txnid,
+                            payu: txn
+                        })
                     }
                     else {
                         res.send(orderData);
