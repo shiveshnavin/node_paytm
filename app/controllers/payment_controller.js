@@ -561,7 +561,7 @@ module.exports = function (app, callbacks) {
                             amount: req.body.TXN_AMOUNT,
                             pname: req.body.PRODUCT_NAME,
                             extra: '',
-                            returnUrl: req.body.RETURN_URL
+                            returnUrl: req.body.RETURN_URL || ''
                         });
 
                         return txnTask.save().then(onTxn)
@@ -672,15 +672,30 @@ module.exports = function (app, callbacks) {
         var myquery = { orderId: req.body.ORDERID };
 
         Transaction.findOne(myquery, function (err, objForUpdate) {
-
+            let returnUrl = objForUpdate ? objForUpdate.returnUrl : null;
+            if (returnUrl == 'undefined') {
+                returnUrl = undefined
+            }
             if (err || !objForUpdate) {
+                if (returnUrl) {
+                    let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                    returnUrl = returnUrl + separator + 'status=FAILED&message=txn_not_found&ORDERID=' + req.body.ORDERID;
+                    return res.redirect(returnUrl);
+                }
                 res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                 return;
             }
             if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING") && objForUpdate.status != ("PENDING")) {
                 objForUpdate.readonly = "readonly"
                 objForUpdate.action = config.homepage
-                res.render(vp + "result.hbs", objForUpdate);
+                if (returnUrl) {
+                    let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                    returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
+                    return res.redirect(returnUrl);
+                }
+                else {
+                    res.render(vp + "result.hbs", objForUpdate);
+                }
                 console.log("Transaction already processed ", req.body.ORDERID)
                 // res.send({ message: "Transaction already processed", status: objForUpdate.status, ORDERID: objForUpdate.orderId, TXNID: objForUpdate.TXNID, TXNID: req.body.TXNID })
                 return;
@@ -696,6 +711,11 @@ module.exports = function (app, callbacks) {
             Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
 
                 if (err) {
+                    if (returnUrl) {
+                        let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                        returnUrl = returnUrl + separator + 'status=FAILED&message=update_error&ORDERID=' + req.body.ORDERID;
+                        return res.redirect(returnUrl);
+                    }
                     res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                 }
                 else {
@@ -704,6 +724,11 @@ module.exports = function (app, callbacks) {
                         callbacks.onFinish(req.body.ORDERID, req.body);
                     objForUpdate.readonly = "readonly"
                     objForUpdate.action = config.homepage
+                    if (returnUrl) {
+                        let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                        returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
+                        return res.redirect(returnUrl);
+                    }
                     res.render(vp + "result.hbs", objForUpdate);
                 }
             });
@@ -899,6 +924,7 @@ module.exports = function (app, callbacks) {
                     phone: user.phone,
                     amount: req.body.TXN_AMOUNT,
                     pname: req.body.PRODUCT_NAME,
+                    returnUrl: req.body.RETURN_URL || '',
                     extra: (req.body.EXTRA || '')
 
                 });
@@ -909,7 +935,10 @@ module.exports = function (app, callbacks) {
                         NAME: txn.name,
                         EMAIL: txn.email,
                         MOBILE_NO: txn.phone,
-                        ORDER_ID: txn.orderId
+                        ORDER_ID: txn.orderId,
+                        RETURN_URL: txn.returnUrl,
+                        TXN_AMOUNT: txn.amount,
+                        PRODUCT_NAME: txn.pname
                     }))
 
                     txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
@@ -941,6 +970,7 @@ module.exports = function (app, callbacks) {
                 req.body.EMAIL = createTxnResult.email
                 req.body.MOBILE_NO = createTxnResult.phone
                 req.body.ORDER_ID = createTxnResult.orderId
+                req.body.RETURN_URL = createTxnResult.returnUrl
                 module.init(req, {
                     render: (renderPath, initResultRender) => {
                         // console.log(initResultRender)
