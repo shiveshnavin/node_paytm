@@ -1,4 +1,14 @@
-module.exports = function (modelName, db) {
+module.exports = function (modelName, db, sampleData) {
+
+    if (db && sampleData && db.create) {
+        db.create(modelName, sampleData)
+            .then(() => {
+                console.log('Model Created in db ', modelName);
+            })
+            .catch((e) => {
+                console.log('Error in creating model ', e);
+            });
+    }
 
     class MultiDbMapper {
 
@@ -21,12 +31,12 @@ module.exports = function (modelName, db) {
         }
 
         async save() {
-            var response = await MultiDbMapper.db.insert(MultiDbMapper.modelname, this.objectData,this.objectData[MultiDbMapper.idFieldName]);
-            if ( typeof response == Object && response.ops[0])
+            var response = await MultiDbMapper.db.insert(MultiDbMapper.modelname, this.objectData, this.objectData[MultiDbMapper.idFieldName]);
+            if (typeof response == Object && response.ops[0])
                 response = response.ops[0];
             else
                 response = this.objectData
-                
+
             MultiDbMapper.sanitizeRequest(response)
 
             return response;

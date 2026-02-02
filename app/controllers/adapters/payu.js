@@ -94,28 +94,57 @@ class PayU {
 
         return { html: html, payload: payload };
     }
+    decodeTransactionResponse(txnDataBase64FromPayu) {
+        const txnDataJson = Buffer.from(txnDataBase64FromPayu, 'base64').toString('utf-8');
+        return JSON.parse(txnDataJson);
+    }
+    async verifyResult(req) {
+        const originalBody = req.body || {};
+        const lookupId = originalBody.txnid || req.query.order_id;
+        const statusResp = await this.checkBqrTxnStatus(lookupId);
 
-    verifyResult(req) {
-        const body = req.body || {};
-        const hashFromPayU = (body.hash || '').toLowerCase();
-        const calculatedHash = this.buildResponseHash(body).toLowerCase();
-        const valid = hashFromPayU.length > 0 && hashFromPayU === calculatedHash;
+        let resData = null;
+        if (!resData && statusResp && statusResp.transaction_details) {
+            const td = statusResp.transaction_details;
+            // try direct lookup by lookupId
+            if (td[lookupId]) {
+                resData = td[lookupId];
+            }
+            else {
+                // find entry where txnid matches lookupId or key ends with lookupId
+                for (const k of Object.keys(td)) {
+                    const t = td[k];
+                    if (!t) continue;
+                    if ((t.txnid && t.txnid.toString() === lookupId) || k.toString().endsWith(lookupId)) {
+                        resData = t;
+                        break;
+                    }
+                }
+            }
+        }
 
+        // Determine source for status and mapping (prefer decoded resData)
+        const source = resData || (statusResp || {}) || originalBody;
+
+        const msg = (statusResp?.msg || '').toString();
+        const statusText = (source.status || source.unmappedstatus || msg || '').toString().toLowerCase();
         let status = 'TXN_FAILURE';
-        if (body.status === 'success') {
+        if (statusText.includes('success') || statusText.includes('completed') || statusText.includes('captured')) {
             status = 'TXN_SUCCESS';
         }
-        else if (body.status === 'pending') {
+        else if (statusText.includes('pending')) {
             status = 'TXN_PENDING';
         }
 
+        const orderId = (source.udf2 || source.order_id || source.txnid || lookupId).toString();
+        const txnId = source.mihpayid || source.txnid || null;
+
         return {
-            valid: valid,
             STATUS: status,
-            ORDERID: body.txnid,
-            TXNID: body.mihpayid || body.txnid,
-            data: body,
-            isCancelled: body.status === 'failure'
+            ORDERID: orderId,
+            TXNID: txnId,
+            data: resData || statusResp || originalBody,
+            cancelled: source.unmappedstatus?.toLowerCase()?.includes('cancelled') || false
         };
     }
 
@@ -138,6 +167,39 @@ class PayU {
         catch (e) {
             return { error: e.message };
         }
+    }
+
+    async postCommand(command, transactionId) {
+        const payload = new URLSearchParams();
+        payload.append('key', this.config.key || '');
+        payload.append('command', command || '');
+        payload.append('var1', transactionId || '');
+
+        // build hash: key|command|var1...|salt
+        const hashParts = [this.config.key, command, transactionId, this.config.salt];
+        const hashString = hashParts.join('|');
+        payload.append('hash', crypto.createHash('sha512').update(hashString).digest('hex'));
+
+        try {
+            const response = await axios.post(this.config.verifyUrl, payload.toString(), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            return response.data;
+        }
+        catch (e) {
+            return { error: e.message };
+        }
+    }
+
+    /**
+     * https://docs.payu.in/reference/transaction-status-check-api-2#sample-request
+     * @param {*} transactionId mandatory
+     * @param {*} paymentmode optional
+     * @param {*} productype optional
+     * @returns 
+     */
+    async checkBqrTxnStatus(transactionId) {
+        return this.postCommand('verify_payment', transactionId);
     }
 
     renderProcessingPage(params, paymentReq, res, loadingSVG) {

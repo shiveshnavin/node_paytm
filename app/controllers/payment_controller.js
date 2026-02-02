@@ -77,10 +77,11 @@ module.exports = function (app, callbacks) {
 
     var razorPayInstance;
     var openMoneyInstance = new OpenMoney(config);
-    var payuInstance;
+    var payuInstance = new PayU(config)
 
-    if (config.razor_url)
+    if (config.razor_url) {
         razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+    }
     if (config.open_money_url) {
         openMoneyInstance = new OpenMoney(config);
     }
@@ -94,7 +95,22 @@ module.exports = function (app, callbacks) {
         usingMultiDbOrm = false;
 
     } else if (app.multidborm) {
-        Transaction = require('../models/np_multidbplugin.js')('nptransactions', app.multidborm);
+        const sample = {
+            orderId: "string",
+            cusId: "string",
+            time: 1770051201752,
+            timeStamp: 1770051201752,
+            status: "string",
+            name: "string",
+            email: "string",
+            phone: "string",
+            amount: 1,
+            pname: "string",
+            extra: "stringlarge",
+            TXNID: "27118670199",
+            returnUrl: "string"
+        }
+        Transaction = require('../models/np_multidbplugin.js')('nptransactions', app.multidborm, sample);
         Transaction.db = app.multidborm;
         Transaction.modelname = 'nptransactions'
         Transaction.idFieldName = 'orderId'
@@ -129,24 +145,24 @@ module.exports = function (app, callbacks) {
     module.init = async function (req, res) {
 
         if (!req.body.ORDER_ID && !req.body.EMAIL && req.query.to) {
-
             let toData = JSON.parse(nodeBase64.decode(req.query.to));
             req.body.NAME = toData.NAME
             req.body.EMAIL = toData.EMAIL
+            req.body.TXN_AMOUNT = toData.TXN_AMOUNT
             req.body.MOBILE_NO = toData.MOBILE_NO
-            req.body.ORDER_ID = toData.ORDER_ID
+            req.body.ORDER_ID = toData.ORDER_ID || toData.ORDERID
+            req.body.PRODUCT_NAME = toData.PRODUCT_NAME
+            req.body.RETURN_URL = toData.RETURN_URL
         }
 
         sanitizeRequest(req.body);
         let gotAllParams = true;
-
+        let checkedFields = ['TXN_AMOUNT', 'PRODUCT_NAME', 'MOBILE_NO', 'NAME', 'EMAIL']
         if (req.body !== undefined) {
-            let checks = [req.body.TXN_AMOUNT, req.body.PRODUCT_NAME,
-            req.body.MOBILE_NO, req.body.NAME, req.body.EMAIL]
 
-            for (var i = 0; i < checks.length; i++) {
+            for (var i = 0; i < checkedFields.length; i++) {
 
-                if (checks[i] === undefined) {
+                if (req.body[checkedFields[i]] === undefined) {
                     gotAllParams = false;
                     break;
                 }
@@ -170,7 +186,7 @@ module.exports = function (app, callbacks) {
             params['WEBSITE'] = req.body.WEBSITE;
             params['CHANNEL_ID'] = req.body.CHANNEL_ID;
             params['INDUSTRY_TYPE_ID'] = req.body.INDUSTRY_TYPE_ID;
-            params['ORDER_ID'] = req.body.ORDER_ID;
+            params['ORDER_ID'] = req.body.ORDER_ID || req.body.ORDERID;
             params['CUST_ID'] = req.body.CUST_ID;
             params['TXN_AMOUNT'] = req.body.TXN_AMOUNT;
             params['CALLBACK_URL'] = req.body.CALLBACK_URL + "?order_id=" + req.body.ORDER_ID;
@@ -530,49 +546,55 @@ module.exports = function (app, callbacks) {
 
 
 
+
+                    function onOrder(orderId) {
+
+                        var txnTask = new Transaction({
+                            orderId: orderId,
+                            cusId: user.id,
+                            time: Date.now(),
+                            timeStamp: Date.now(),
+                            status: 'INITIATED',
+                            name: user.name,
+                            email: user.email,
+                            phone: user.phone,
+                            amount: req.body.TXN_AMOUNT,
+                            pname: req.body.PRODUCT_NAME,
+                            extra: '',
+                            returnUrl: req.body.RETURN_URL
+                        });
+
+                        return txnTask.save().then(onTxn)
+                            .catch(err => {
+
+                                console.log(err)
+                                if (req.body.RETURN_URL) {
+                                    res.redirect(req.body.RETURN_URL + "?status=failed")
+                                    return;
+                                }
+                                res.redirect('')
+                            });
+                    }
+
                     if ((req.body.ORDER_ID !== undefined && req.body.ORDER_ID.length > 2)) {
-
-
                         var myquery = { orderId: req.body.ORDER_ID };
                         Transaction.findOne(myquery, function (err, orderData) {
-
-                            onTxn(orderData);
+                            if (err || (!orderData)) {
+                                if (gotAllParams) {
+                                    console.log("Creating new order for ", req.body.ORDER_ID)
+                                    onOrder(req.body.ORDER_ID)
+                                }
+                                else {
+                                    res.send({ message: "Order Not Found or missing required data: " + checkedFields.join(", "), ORDERID: req.body.ORDER_ID })
+                                }
+                            }
+                            else {
+                                onTxn(orderData);
+                            }
 
                         }, usingMultiDbOrm ? Transaction : undefined);
-
-
-
                     }
                     else {
-
-
-                        function onOrder(orderId) {
-
-                            var txnTask = new Transaction({
-
-                                orderId: orderId,
-                                cusId: user.id,
-                                time: Date.now(),
-                                timeStamp: Date.now(),
-                                status: 'INITIATED',
-                                name: user.name,
-                                email: user.email,
-                                phone: user.phone,
-                                amount: req.body.TXN_AMOUNT,
-                                pname: req.body.PRODUCT_NAME,
-                                extra: ''
-
-                            });
-
-                            txnTask.save().then(onTxn)
-                                .catch(err => {
-
-                                    console.log(err)
-
-                                    res.redirect('')
-                                });
-                        }
-
                         let orderId;
                         if (config.paytm_url) {
                             orderId = "pay_" + makeid(config.id_length || IDLEN)
@@ -651,7 +673,7 @@ module.exports = function (app, callbacks) {
 
         Transaction.findOne(myquery, function (err, objForUpdate) {
 
-            if (err) {
+            if (err || !objForUpdate) {
                 res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
                 return;
             }
@@ -736,15 +758,14 @@ module.exports = function (app, callbacks) {
             }
         }
         else if (config.payu_url) {
-            const payuRest = payuInstance.verifyResult(req);
+            const payuRest = await payuInstance.verifyResult(req);
             result = payuRest.valid;
             req.body.STATUS = payuRest.STATUS;
             req.body.TXNID = payuRest.TXNID;
             req.body.ORDERID = payuRest.ORDERID || req.query.order_id;
             req.body.extras = payuRest.data;
-            if (payuRest.isCancelled) {
-                isCancelled = true;
-            }
+            result = true;
+            isCancelled = payuRest.cancelled;
         }
         else if (config.open_money_url) {
             let openRest = await openMoneyInstance.verifyResult(req);
