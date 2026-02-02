@@ -1,6 +1,6 @@
-var User ;
+var User;
 var Transaction = require('../models/np_transaction.model.js');
-var IDLEN = 10 ;
+var IDLEN = 10;
 function makeid(length) {
   var text = "";
   var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -20,10 +20,19 @@ module.exports = function (app, callbacks) {
     User = require('../models/np_user.model.js');
     usingMultiDbOrm = false;
   } else if (app.multidborm) {
-    User = require('../models/np_multidbplugin.js')('npusers',app.multidborm);
-    User.db=app.multidborm;
-    User.modelname='npusers'
-    User.idFieldName='id'
+    const sample = {
+      "id": "user_aB3dE9xY1Z",
+      "name": "tset",
+      "email": "testgmailcom",
+      "phone": "12345678",
+      "createdAt": "stringlarge",
+      "updatedAt": "stringlarge",
+      "returnUrl": "stringlarge"
+    }
+    User = require('../models/np_multidbplugin.js')('npusers', app.multidborm, sample);
+    User.db = app.multidborm;
+    User.modelname = 'npusers'
+    User.idFieldName = 'id'
     app.NPUser = User;
     usingMultiDbOrm = true;
   }
@@ -40,7 +49,7 @@ module.exports = function (app, callbacks) {
         if (userData.email && userData.email.indexOf("@") !== -1) objForUpdate.email = userData.email;
         if (userData.phone && userData.phone.length > 2) objForUpdate.phone = userData.phone;
         if (userData.name && userData.name.length > 2) objForUpdate.name = userData.name;
-        delete objForUpdate._id ;
+        delete objForUpdate._id;
         var newvalues = { $set: objForUpdate };
         //console.log("User Old : ",userData.name);
         User.updateOne(myquery, newvalues, function (err, saveRes) {
@@ -58,7 +67,7 @@ module.exports = function (app, callbacks) {
 
         //  console.log("User New : ",userData.name);
 
-        userData.id = "user_"+makeid(IDLEN);
+        userData.id = "user_" + makeid(IDLEN);
         var userTask = new User(userData);
         userTask.save()
           .then(user => {
@@ -72,7 +81,7 @@ module.exports = function (app, callbacks) {
 
       }
 
-    },usingMultiDbOrm ? User : undefined);
+    }, usingMultiDbOrm ? User : undefined);
 
   };
   return module;
