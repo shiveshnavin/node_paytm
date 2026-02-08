@@ -34,13 +34,7 @@
         <a href="{{receiptUrl}}" class="button" style="text-decoration:none;">Download Receipt</a>
         <form action="{{homeAction}}" method="GET" style="display:inline"><button type="submit" class="button">Done</button></form>
       </div>
-      <div class="fail-buttons" style="display:flex; gap:12px;">
-        <form action="{{retryAction}}" method="POST" style="display:inline">
-          <input type="hidden" name="ORDER_ID" value="{{orderId}}" />
-          <button type="submit" class="button">Try Again</button>
-        </form>
-        <form action="{{cancelAction}}" method="GET" style="display:inline"><button type="submit" class="button">Cancel</button></form>
-      </div>
+      
     </div>
   </div>
 </section>
