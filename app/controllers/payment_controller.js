@@ -148,7 +148,7 @@ module.exports = function (app, callbacks) {
 
     module.init = async function (req, res) {
 
-        if (!req.body.ORDER_ID && !req.body.EMAIL && req.query.to) {
+        if (!req.body.ORDER_ID && !req.body.EMAIL && req.query?.to) {
             let toData = JSON.parse(nodeBase64.decode(req.query.to));
             req.body.NAME = toData.NAME
             req.body.EMAIL = toData.EMAIL
@@ -517,7 +517,7 @@ module.exports = function (app, callbacks) {
                         let showConfirmation =
                             function (err, checksum) {
                                 res.render(vp + "init.hbs", {
-                                    action: '',
+                                    action:"/"+ config.path_prefix+"/init",
                                     readonly: 'readonly',
                                     BUTTON: 'Pay',
                                     NAME: params['NAME'],
@@ -649,7 +649,7 @@ module.exports = function (app, callbacks) {
 
             res.render(vp + "init.hbs", {
 
-                action: '',
+                action:"/"+ config.path_prefix+"/init",
                 readonly: '',
                 check: true,
                 BUTTON: 'Submit',
@@ -673,77 +673,95 @@ module.exports = function (app, callbacks) {
 
     }
 
-    function updateTransaction(req, res) {
-        var myquery = { orderId: req.body.ORDERID };
+    async function updateTransaction(req, res) {
+        var orderToFind = req.body.ORDERID || req.body.ORDER_ID || req.body.ORDERId || (req.query && req.query.order_id) || req.body.ORDER_ID;
+        var myquery = { orderId: orderToFind };
 
-        Transaction.findOne(myquery, function (err, objForUpdate) {
-            let returnUrl = objForUpdate ? objForUpdate.returnUrl : null;
-            if (returnUrl == 'undefined') {
-                returnUrl = undefined
+        let objForUpdate = null;
+        try {
+            // try default
+            objForUpdate = await Transaction.findOne(myquery).catch(() => null);
+            // try id
+            if (!objForUpdate) objForUpdate = await Transaction.findOne({ id: orderToFind }).catch(() => null);
+            // try uppercase key
+            if (!objForUpdate) objForUpdate = await Transaction.findOne({ ORDERID: orderToFind }).catch(() => null);
+        } catch (e) {
+            // ignore lookup errors
+            objForUpdate = objForUpdate || null;
+        }
+
+        let returnUrl = objForUpdate ? objForUpdate.returnUrl : null;
+        if (returnUrl == 'undefined') returnUrl = undefined;
+
+        if (!objForUpdate) {
+            if (returnUrl) {
+                let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                returnUrl = returnUrl + separator + 'status=FAILED&message=txn_not_found&ORDERID=' + req.body.ORDERID;
+                return res.redirect(returnUrl);
             }
-            if (err || !objForUpdate) {
+            return res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID });
+        }
+
+        if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING") && objForUpdate.status != ("PENDING")) {
+            objForUpdate.readonly = "readonly";
+            objForUpdate.action = config.homepage;
+            if (returnUrl) {
+                let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
+                return res.redirect(returnUrl);
+            }
+            else {
+                return res.render(vp + "result.hbs", objForUpdate);
+            }
+        }
+
+        if (req.body.status == "paid" && !req.body.STATUS) req.body.STATUS = "TXN_SUCCESS";
+        objForUpdate.status = req.body.STATUS;
+        objForUpdate.TXNID = req.body.TXNID;
+        objForUpdate.extra = JSON.stringify(req.body);
+
+        var newvalues = { $set: objForUpdate };
+        Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
+            if (err) {
                 if (returnUrl) {
                     let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                    returnUrl = returnUrl + separator + 'status=FAILED&message=txn_not_found&ORDERID=' + req.body.ORDERID;
+                    returnUrl = returnUrl + separator + 'status=FAILED&message=update_error&ORDERID=' + req.body.ORDERID;
                     return res.redirect(returnUrl);
                 }
-                res.send({ message: "Transaction Not Found !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
-                return;
+                return res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID });
             }
-            if (objForUpdate.status != ("INITIATED") && objForUpdate.status != ("TXN_PENDING") && objForUpdate.status != ("PENDING")) {
-                objForUpdate.readonly = "readonly"
-                objForUpdate.action = config.homepage
-                if (returnUrl) {
-                    let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                    returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
-                    return res.redirect(returnUrl);
-                }
-                else {
-                    res.render(vp + "result.hbs", objForUpdate);
-                }
-                console.log("Transaction already processed ", req.body.ORDERID)
-                // res.send({ message: "Transaction already processed", status: objForUpdate.status, ORDERID: objForUpdate.orderId, TXNID: objForUpdate.TXNID, TXNID: req.body.TXNID })
-                return;
+
+            if (callbacks && typeof callbacks.onFinish === 'function') {
+                callbacks.onFinish(req.body.ORDERID, objForUpdate);
             }
-            if (req.body.status == "paid" && !req.body.STATUS) {
-                req.body.STATUS = "TXN_SUCCESS"
+            objForUpdate.readonly = "readonly";
+            objForUpdate.action = config.homepage;
+            if (returnUrl) {
+                let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
+                return res.redirect(returnUrl);
             }
-            objForUpdate.status = req.body.STATUS;
-            objForUpdate.TXNID = req.body.TXNID;
-            objForUpdate.extra = JSON.stringify(req.body);
-
-            var newvalues = { $set: objForUpdate };
-            Transaction.updateOne(myquery, newvalues, function (err, saveRes) {
-
-                if (err) {
-                    if (returnUrl) {
-                        let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                        returnUrl = returnUrl + separator + 'status=FAILED&message=update_error&ORDERID=' + req.body.ORDERID;
-                        return res.redirect(returnUrl);
-                    }
-                    res.send({ message: "Error Occured !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID })
-                }
-                else {
-
-                    if (callbacks && typeof callbacks.onFinish === 'function') {
-                        callbacks.onFinish(req.body.ORDERID, req.body);
-                    }
-                    objForUpdate.readonly = "readonly"
-                    objForUpdate.action = config.homepage
-                    if (returnUrl) {
-                        let separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                        returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
-                        return res.redirect(returnUrl);
-                    }
-                    res.render(vp + "result.hbs", objForUpdate);
-                }
-            });
-
-        }, usingMultiDbOrm ? Transaction : undefined)
+            res.render(vp + "result.hbs", objForUpdate);
+        });
     }
 
     module.callback = async (req, res) => {
         console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
+
+        // Normalize common order id and txn id field names (support ORDER_ID, ORDERID, etc.)
+        try {
+            if ((!req.body.ORDERID || req.body.ORDERID === '') && req.body.ORDER_ID) {
+                req.body.ORDERID = req.body.ORDER_ID;
+            }
+            if ((!req.body.TXNID || req.body.TXNID === '') && req.body.TXN_ID) {
+                req.body.TXNID = req.body.TXN_ID;
+            }
+            if ((!req.body.ORDERID || req.body.ORDERID === '') && req.query && req.query.order_id) {
+                req.body.ORDERID = req.query.order_id;
+            }
+        } catch (e) {
+            // ignore
+        }
 
         var result = false;
         let isCancelled = false;

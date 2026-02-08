@@ -1,39 +1,46 @@
-<section class="card">
-  <header class="card__header">
-    <div>
-      <p class="eyebrow">Status</p>
-      <h2>Payment {{status}}</h2>
+<section class="card" style="text-align:center; padding:36px 28px;">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:18px;" class="status-{{status}}">
+    <div style="width:84px; height:84px; border-radius:999px; display:grid; place-items:center; background:rgba(255,255,255,0.03);">
+      <svg class="icon-success" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17l-5-5" stroke="#4cff9f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="icon-fail" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none"><circle cx="12" cy="12" r="9" stroke="#ff9b9b" stroke-width="2.2"/><path d="M12 8v5" stroke="#ff9b9b" stroke-width="2.2" stroke-linecap="round"/><path d="M12 16h.01" stroke="#ff9b9b" stroke-width="2.2" stroke-linecap="round"/></svg>
     </div>
-    <div class="status-chip {{status}}">{{status}}</div>
-  </header>
 
-  <div class="result-grid">
-    <div class="result-item">
-      <p class="label">Order ID</p>
-      <p class="value">{{orderId}}</p>
+    <div>
+      <h2 style="margin:0">Payment</h2>
+      <p class="helper" style="margin-top:6px">{{message}}</p>
     </div>
-    <div class="result-item">
-      <p class="label">Transaction ID</p>
-      <p class="value">{{TXNID}}</p>
+
+    <div class="result-grid" style="max-width:560px; width:100%;">
+      <div class="result-item">
+        <p class="label">Order ID</p>
+        <p class="value">{{orderId}}</p>
+      </div>
+      <div class="result-item">
+        <p class="label">Transaction ID</p>
+        <p class="value">{{TXNID}}</p>
+      </div>
+      <div class="result-item">
+        <p class="label">Amount</p>
+        <p class="value">{{amount}}</p>
+      </div>
+      <div class="result-item">
+        <p class="label">Date &amp; Time</p>
+        <p class="value">{{date}}</p>
+      </div>
     </div>
-    <div class="result-item">
-      <p class="label">Email</p>
-      <p class="value">{{email}}</p>
-    </div>
-    <div class="result-item">
-      <p class="label">Phone</p>
-      <p class="value">{{phone}}</p>
-    </div>
-    <div class="result-item">
-      <p class="label">Amount</p>
-      <p class="value">{{amount}}</p>
+
+    <div style="display:flex; gap:12px; margin-top:8px; width:100%; justify-content:center;">
+      <div class="success-buttons" style="display:flex; gap:12px;">
+        <a href="{{receiptUrl}}" class="button" style="text-decoration:none;">Download Receipt</a>
+        <form action="{{homeAction}}" method="GET" style="display:inline"><button type="submit" class="button">Done</button></form>
+      </div>
+      <div class="fail-buttons" style="display:flex; gap:12px;">
+        <form action="{{retryAction}}" method="POST" style="display:inline">
+          <input type="hidden" name="ORDER_ID" value="{{orderId}}" />
+          <button type="submit" class="button">Try Again</button>
+        </form>
+        <form action="{{cancelAction}}" method="GET" style="display:inline"><button type="submit" class="button">Cancel</button></form>
+      </div>
     </div>
   </div>
-
-  <form action="{{action}}" method="POST" class="form-grid form-grid--compact">
-    <input type="hidden" name="ORDER_ID" value="{{orderId}}" />
-    <input type="hidden" name="TXNID" value="{{TXNID}}" />
-    <button type="submit" class="button">Done</button>
-  </form>
 </section>
-        </form>

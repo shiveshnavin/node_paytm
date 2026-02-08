@@ -1,70 +1,89 @@
-<section class="card">
-  <header class="card__header">
-    <div>
-      <p class="eyebrow">Payment</p>
-      <h2>Review &amp; pay</h2>
+<div class="checkout-grid">
+  <aside class="product-panel card">
+     {{#if productImage}}
+        <div class="product-preview">
+            <img src="{{productImage}}" alt="{{PRODUCT_NAME}}" style="width:100%;height:100%;object-fit:cover" />
+        </div>
+       {{/if}}
+  
+    <div class="product-price">
+      <div class="pill">Product</div>
+      <div class="price">{{PRODUCT_NAME}}</div>
     </div>
-    <div class="amount-chip">{{TXN_AMOUNT}} <span>INR</span></div>
-  </header>
+     {{#if PRODUCT_DESC}}
+    <p class="helper" style="margin-top:14px;">{{PRODUCT_DESC}}</p>
+       {{/if}}
+  </aside>
 
-  <p class="helper">Your payment is processed over an encrypted channel. Double-check the details before you continue.</p>
+  <section class="form-panel card">
+    <header class="card__header">
+      <div>
+        <p class="eyebrow">Payment</p>
+        <h2>Review &amp; pay</h2>
+      </div>
+      <div class="amount-chip">₹ {{TXN_AMOUNT}}</div>
+    </header>
 
-  <form action="{{action}}" method="POST" class="form-grid" id="payment-form">
-    {{#if check}}
-    <label class="field">
-      <span class="field__label">Name</span>
-      <input type="text" name="NAME" required value="{{NAME}}" {{readonly}} />
-    </label>
-    {{else}}
-    <input type="hidden" name="NAME" required value="{{NAME}}" {{readonly}} />
-    {{/if}}
+    <p class="helper">Your payment is processed over an encrypted channel. Double-check the details before you continue.</p>
 
-    <label class="field">
-      <span class="field__label">Email</span>
-      <input type="email" name="EMAIL" required value="{{EMAIL}}" {{readonly}} />
-    </label>
+    <form action="{{action}}" method="POST" class="form-grid" id="payment-form">
+      {{#if check}}
+      <label class="field">
+        <span class="field__label">Full Name</span>
+        <input type="text" name="NAME" required value="{{NAME}}" {{readonly}} />
+      </label>
+      {{else}}
+      <input type="hidden" name="NAME" required value="{{NAME}}" {{readonly}} />
+      {{/if}}
 
-    <label class="field">
-      <span class="field__label">Phone</span>
-      <input type="text" name="MOBILE_NO" required value="{{MOBILE_NO}}" {{readonly}} />
-    </label>
+      <label class="field">
+        <span class="field__label">Email address</span>
+        <input type="email" name="EMAIL" required value="{{EMAIL}}" {{readonly}} />
+      </label>
 
-    {{#if check}}
-    <label class="field">
-      <span class="field__label">Product</span>
-      <input type="text" name="PRODUCT_NAME" required value="{{PRODUCT_NAME}}" {{readonly}} />
-    </label>
-    {{else}}
-    <input type="hidden" name="PRODUCT_NAME" required value="{{PRODUCT_NAME}}" {{readonly}} />
-    {{/if}}
+      <label class="field">
+        <span class="field__label">Phone</span>
+        <input type="text" name="MOBILE_NO" required value="{{MOBILE_NO}}" {{readonly}} />
+      </label>
 
-    <label class="field">
-      <span class="field__label">Amount</span>
-      <input type="text" name="TXN_AMOUNT" required value="{{TXN_AMOUNT}}" {{readonly}} />
-    </label>
+      {{#if check}}
+      <label class="field">
+        <span class="field__label">Product</span>
+        <input type="text" name="PRODUCT_NAME" required value="{{PRODUCT_NAME}}" {{readonly}} />
+      </label>
+      {{else}}
+      <input type="hidden" name="PRODUCT_NAME" required value="{{PRODUCT_NAME}}" {{readonly}} />
+      {{/if}}
 
-    {{#if check}}
-    <label class="checkbox">
-      <input type="checkbox" name="save_cc" checked="checked" />
-      <span>I agree to the merchant terms</span>
-    </label>
-    {{/if}}
+      <label class="field">
+        <span class="field__label">Amount</span>
+        <input type="text" name="TXN_AMOUNT" required value="{{TXN_AMOUNT}}" {{readonly}} />
+      </label>
 
-    <button id="pay-button" type="submit" class="button">{{BUTTON}}</button>
+      <div style="grid-column:1 / -1; display:flex; gap:10px; align-items:center; justify-content:space-between;">
+        <label class="checkbox" style="margin:0">
+          <input type="checkbox" name="save_cc" checked="checked" />
+          <span>I agree to the merchant terms</span>
+        </label>
+        <div style="font-size:12px; color:rgba(255,255,255,0.6)">Secure by PCI-DSS</div>
+      </div>
 
-    <input type="hidden" name="MID" value="{{MID}}" {{readonly}} />
-    <input type="hidden" name="WEBSITE" value="{{WEBSITE}}" {{readonly}} />
-    <input type="hidden" name="ORDER_ID" value="{{ORDER_ID}}" {{readonly}} />
-    <input type="hidden" name="CUST_ID" value="{{CUST_ID}}" {{readonly}} />
-    <input type="hidden" name="INDUSTRY_TYPE_ID" value="{{INDUSTRY_TYPE_ID}}" {{readonly}} />
-    <input type="hidden" name="CHANNEL_ID" value="{{CHANNEL_ID}}" {{readonly}} />
-    <input type="hidden" name="CALLBACK_URL" value="{{CALLBACK_URL}}" {{readonly}} />
-    <input type="hidden" name="CHECKSUMHASH" value="{{CHECKSUMHASH}}" {{readonly}} />
-  </form>
-</section>
+      <button id="pay-button" type="submit" class="button">{{BUTTON}}</button>
 
-<script>
-  (() => {
+      <input type="hidden" name="MID" value="{{MID}}" {{readonly}} />
+      <input type="hidden" name="WEBSITE" value="{{WEBSITE}}" {{readonly}} />
+      <input type="hidden" name="ORDER_ID" value="{{ORDER_ID}}" {{readonly}} />
+      <input type="hidden" name="CUST_ID" value="{{CUST_ID}}" {{readonly}} />
+      <input type="hidden" name="INDUSTRY_TYPE_ID" value="{{INDUSTRY_TYPE_ID}}" {{readonly}} />
+      <input type="hidden" name="CHANNEL_ID" value="{{CHANNEL_ID}}" {{readonly}} />
+      <input type="hidden" name="CALLBACK_URL" value="{{CALLBACK_URL}}" {{readonly}} />
+      <input type="hidden" name="CHECKSUMHASH" value="{{CHECKSUMHASH}}" {{readonly}} />
+    </form>
+  </section>
+</div>
+
+{{!-- <script>
+  (function(){
     if (window.__npPayBtnBound) return;
     window.__npPayBtnBound = true;
     const payBtn = document.getElementById('pay-button');
@@ -76,5 +95,4 @@
       });
     }
   })();
-</script>
-</form>
+</script> --}}
