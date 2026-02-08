@@ -83,11 +83,27 @@ body.theme-light {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  column-gap: 12px;
+  row-gap: 6px;
+  flex-wrap: nowrap;
+  flex-direction: column;
+}
+
+.product-price .pill {
+  flex-shrink: 0;
 }
 
 .product-price .price {
   font-weight: 800;
   font-size: 20px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .form-panel {
