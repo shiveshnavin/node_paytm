@@ -6,33 +6,115 @@ body {
   min-height: 100vh;
   margin: 0;
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-  background: radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.07), transparent),
-              radial-gradient(120% 120% at 80% 0%, rgba(255,255,255,0.04), transparent),
-              linear-gradient(145deg, #0d0f1a 0%, #0c0b12 45%, #0c0c18 100%);
   color: var(--color-text);
+  background: var(--bg-color);
+}
+
+body.theme-dark {
+  --color-primary: #2f8bff;
+  --color-accent: #5ce1e6;
+  --color-surface: #0f1021;
+  --color-text: #e9ecf2;
+  --color-success: #24cf5f;
+  --color-danger: #ff6b6b;
+  --color-outline: rgba(255,255,255,0.08);
+  --bg-color: #0c0c12;
+}
+
+body.theme-light {
+  --color-primary: #2467ff;
+  --color-accent: #16c1ff;
+  --color-surface: #ffffff;
+  --color-text: #1f2430;
+  --color-success: #1dbf73;
+  --color-danger: #e85050;
+  --color-outline: rgba(0,0,0,0.08);
+  --bg-color: #f7f9fc;
 }
 
 .shell {
   max-width: 780px;
   margin: 32px auto;
   padding: 32px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  background: var(--color-surface);
   border: 1px solid var(--color-outline);
   border-radius: 18px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.12);
+}
+
+/* Two-column checkout layout */
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.product-panel {
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.product-panel .product-title {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.product-panel .product-sub {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 18px;
+}
+
+.product-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  height: 140px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  margin-bottom: 14px;
+}
+
+.product-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.product-price .price {
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.form-panel {
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--color-surface);
 }
 
 .shell__header,
 .shell__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
+.shell__header {
+  justify-content: space-between;
+}
+
 .shell__footer {
+  justify-content: center;
   margin-top: 20px;
   font-size: 13px;
+  color: rgba(0,0,0,0.55);
+}
+
+body.theme-dark .shell__footer {
   color: rgba(255,255,255,0.7);
 }
 
@@ -57,7 +139,6 @@ body {
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.3px;
-  padding: 8px;
 }
 
 .brand__mark--img img {
@@ -85,13 +166,22 @@ body {
   letter-spacing: 0.2px;
 }
 
+body.theme-light .pill {
+  color: rgba(0,0,0,0.7);
+}
+
 .card {
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--color-outline);
   border-radius: 16px;
   padding: 20px;
   backdrop-filter: blur(6px);
-  box-shadow: 0 24px 40px rgba(0,0,0,0.25);
+  box-shadow: 0 24px 40px rgba(0,0,0,0.1);
+}
+
+body.theme-light .card {
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(23, 38, 61, 0.08);
 }
 
 .card__header {
@@ -118,18 +208,26 @@ h2 {
 
 .helper {
   margin: 4px 0 16px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(0,0,0,0.65);
   font-size: 14px;
+}
+
+body.theme-dark .helper {
+  color: rgba(255,255,255,0.7);
 }
 
 .amount-chip {
   padding: 10px 14px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  color: #0c0b12;
+  background: var(--color-primary);
+  color: #ffffff;
   font-weight: 700;
   min-width: 120px;
   text-align: right;
+}
+
+body.theme-light .amount-chip {
+  color: #0f172a;
 }
 
 .amount-chip span {
@@ -176,6 +274,16 @@ textarea {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+body.theme-light input[type="text"],
+body.theme-light input[type="email"],
+body.theme-light input[type="number"],
+body.theme-light input[type="tel"],
+body.theme-light input[type="password"],
+body.theme-light textarea {
+  background: #f8f9fb;
+  color: #1f2430;
+}
+
 input:focus,
 textarea:focus {
   outline: none;
@@ -188,6 +296,10 @@ textarea:focus {
   align-items: center;
   gap: 10px;
   font-size: 14px;
+  color: rgba(0,0,0,0.8);
+}
+
+body.theme-dark .checkbox {
   color: rgba(255,255,255,0.8);
 }
 
@@ -202,13 +314,13 @@ textarea:focus {
   padding: 14px;
   border: 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  color: #0c0b12;
+  background: var(--color-primary);
+  color: #ffffff;
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
-  box-shadow: 0 18px 28px rgba(0,0,0,0.25);
+  box-shadow: 0 18px 28px rgba(0,0,0,0.12);
 }
 
 .button:hover {
@@ -240,19 +352,31 @@ textarea:focus {
   background: rgba(255,255,255,0.02);
 }
 
+body.theme-light .result-item {
+  background: #f8f9fb;
+}
+
 .result-item .label {
   margin: 0;
   font-size: 12px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0,0,0,0.6);
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+body.theme-dark .result-item .label {
+  color: rgba(255,255,255,0.6);
 }
 
 .result-item .value {
   margin: 6px 0 0;
   font-weight: 600;
-  color: #fff;
+  color: #0f172a;
   word-break: break-all;
+}
+
+body.theme-dark .result-item .value {
+  color: #fff;
 }
 
 .status-chip {
@@ -285,6 +409,16 @@ textarea:focus {
   border: 1px solid rgba(255, 215, 122, 0.35);
 }
 
+/* result icon toggles */
+.status-TXN_SUCCESS .icon-success { display: block; }
+.status-TXN_SUCCESS .icon-fail { display: none; }
+.status-TXN_FAILURE .icon-success { display: none; }
+.status-TXN_FAILURE .icon-fail { display: block; }
+
+/* control which button group shows for success/failure */
+.status-TXN_SUCCESS .fail-buttons { display: none !important; }
+.status-TXN_FAILURE .success-buttons { display: none !important; }
+
 .dot {
   opacity: 0.6;
 }
@@ -293,6 +427,10 @@ textarea:focus {
   .shell {
     margin: 16px;
     padding: 20px;
+  }
+
+  .checkout-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-grid {

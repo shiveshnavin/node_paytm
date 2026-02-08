@@ -23,6 +23,7 @@ function createPaymentMiddleware(userConfig = {}, db) {
     subApp.locals.theme = config.theme || {};
     subApp.locals.brand = config.brand || 'Secure Pay';
     subApp.locals.logo = config.logo;
+    subApp.locals.themeName = config.themeName || (config.theme && config.theme.name) || 'dark';
     if (config.db_url) {
         mongoose.Promise = global.Promise;
         mongoose.connect(config.db_url, {
@@ -60,27 +61,19 @@ function createPaymentMiddleware(userConfig = {}, db) {
     };
     subApp.use(bodyParser.urlencoded({ extended: true }));
     subApp.use(bodyParser.json({ verify: saveRawBody }));
-
-    // static assets for the embedded UI
-    subApp.use(`/${config.path_prefix}`, express.static(path.join(__dirname, 'public')));
-
     // wire routes against existing payment controller (logic unchanged)
-    const router = express.Router();
-    const callbacks = config.callbacks || userConfig.callbacks;
+     const callbacks = config.callbacks || userConfig.callbacks;
     const pc = require('./app/controllers/payment_controller')(subApp, callbacks);
 
-    router.all('/', pc.init);
-    router.all('/init', pc.init);
-    router.all('/callback', pc.callback);
-    router.all('/api/webhook', pc.webhook);
-    router.all('/api/status', pc.status);
-    router.all('/api/createTxn/token', pc.createTxnToken);
-    router.all('/api/createTxn', pc.createTxn);
+    subApp.all('/init', pc.init);
+    subApp.all('/callback', pc.callback);
+    subApp.all('/api/webhook', pc.webhook);
+    subApp.all('/api/status', pc.status);
+    subApp.all('/api/createTxn/token', pc.createTxnToken);
+    subApp.all('/api/createTxn', pc.createTxn);
+    subApp.all('/', pc.init);
 
-    subApp.use(`/${config.path_prefix}`, router);
-
-    // lightweight health/landing redirect
-    subApp.get('/', (req, res) => res.redirect(`/${config.path_prefix}/init`));
+    subApp.use(express.static(path.join(__dirname, 'public')), pc.init);
 
     return subApp;
 }
