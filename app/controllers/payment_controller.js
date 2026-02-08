@@ -517,6 +517,7 @@ module.exports = function (app, callbacks) {
                         let showConfirmation =
                             function (err, checksum) {
                                 res.render(vp + "init.hbs", {
+                                    path_prefix: config.path_prefix,
                                     action:"/"+ config.path_prefix+"/init",
                                     readonly: 'readonly',
                                     BUTTON: 'Pay',
@@ -649,6 +650,7 @@ module.exports = function (app, callbacks) {
 
             res.render(vp + "init.hbs", {
 
+               path_prefix: config.path_prefix,
                 action:"/"+ config.path_prefix+"/init",
                 readonly: '',
                 check: true,
@@ -711,7 +713,10 @@ module.exports = function (app, callbacks) {
                 return res.redirect(returnUrl);
             }
             else {
-                return res.render(vp + "result.hbs", objForUpdate);
+                return res.render(vp + "result.hbs", {
+                path_prefix: config.path_prefix,
+                    ...objForUpdate
+                });
             }
         }
 
@@ -741,7 +746,10 @@ module.exports = function (app, callbacks) {
                 returnUrl = returnUrl + separator + 'status=' + objForUpdate.status + '&ORDERID=' + objForUpdate.orderId + '&TXNID=' + objForUpdate.TXNID;
                 return res.redirect(returnUrl);
             }
-            res.render(vp + "result.hbs", objForUpdate);
+            res.render(vp + "result.hbs", {
+               path_prefix: config.path_prefix,
+                ...objForUpdate
+            });
         });
     }
 

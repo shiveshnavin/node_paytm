@@ -27,7 +27,7 @@ const payment = createPaymentMiddleware({
     brand: 'DemoPay',
 }, db);
 
-app.use(payment);
+app.use('/_pay',payment);
 
 app.listen(process.env.PORT || 5543, function () {
     console.log('Server started at', process.env.PORT || 5543);

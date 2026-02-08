@@ -64,7 +64,10 @@ function createPaymentMiddleware(userConfig = {}, db) {
     // wire routes against existing payment controller (logic unchanged)
      const callbacks = config.callbacks || userConfig.callbacks;
     const pc = require('./app/controllers/payment_controller')(subApp, callbacks);
-
+    subApp.use((req, res, next) => {
+        console.log('Received request at', req.originalUrl);
+        next();
+    });
     subApp.all('/init', pc.init);
     subApp.all('/callback', pc.callback);
     subApp.all('/api/webhook', pc.webhook);
