@@ -1,58 +1,53 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Secure Pay</title>
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet">
-
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-
-  <link rel="stylesheet" href="css/style.css">
-
-
-</head>
-
-<body>
-
-  <div class="modal">
-    <div class="modal__container">
-
-      <div class="modal__content">
-
-
-
-
-        {{{body}}}
-
-
-
-      </div> <!-- END: .modal__content -->
-    </div> <!-- END: .modal__container -->
-  </div> <!-- END: .modal -->
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js'></script>
-
-  <script src="js/index.js"></script>
-
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{brand}} · Secure Checkout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
   <style>
-
-    input:focus {
-      border-color: {{theme_color}};
+    :root {
+      --color-primary: {{theme.primary}};
+      --color-accent: {{theme.accent}};
+      --color-surface: {{theme.surface}};
+      --color-text: {{theme.text}};
+      --color-success: {{theme.success}};
+      --color-danger: {{theme.danger}};
+      --color-outline: rgba(255,255,255,0.08);
+      --radius: 14px;
     }
-   /* 
-    body,
-    .form-list__row label {
-      color: #cc0f0f;
-    }
-    input {
-      color: #cc0f0f;
-    }
-
-    */
   </style>
-</body>
+</head>
+<body>
+  <div class="shell">
+    <header class="shell__header">
+      <div class="brand">
+        {{#if logo}}
+          <span class="brand__mark brand__mark--img"><img src="{{logo}}" alt="{{brand}} logo"></span>
+        {{else}}
+          <span class="brand__mark">{{brand}}</span>
+        {{/if}}
+        <div class="brand__text">
+          <div class="brand__title">{{brand}}</div>
+          <div class="brand__meta">Secure checkout</div>
+        </div>
+      </div>
+      <div class="pill">Encrypted</div>
+    </header>
 
+    <main class="shell__content">
+      {{{body}}}
+    </main>
+
+    <footer class="shell__footer">
+      <span>Protected by {{brand}}</span>
+      <span class="dot">•</span>
+      <span>Need help? Contact your merchant</span>
+    </footer>
+  </div>
+</body>
 </html>

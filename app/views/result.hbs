@@ -1,50 +1,39 @@
-  <h2>Payment Status</h2>
+<section class="card">
+  <header class="card__header">
+    <div>
+      <p class="eyebrow">Status</p>
+      <h2>Payment {{status}}</h2>
+    </div>
+    <div class="status-chip {{status}}">{{status}}</div>
+  </header>
 
-        <form action="{{action}}" method="POST">
-          <ul class="form-list">
- 
+  <div class="result-grid">
+    <div class="result-item">
+      <p class="label">Order ID</p>
+      <p class="value">{{orderId}}</p>
+    </div>
+    <div class="result-item">
+      <p class="label">Transaction ID</p>
+      <p class="value">{{TXNID}}</p>
+    </div>
+    <div class="result-item">
+      <p class="label">Email</p>
+      <p class="value">{{email}}</p>
+    </div>
+    <div class="result-item">
+      <p class="label">Phone</p>
+      <p class="value">{{phone}}</p>
+    </div>
+    <div class="result-item">
+      <p class="label">Amount</p>
+      <p class="value">{{amount}}</p>
+    </div>
+  </div>
 
-            <li class="form-list__row">
-              <label>Order ID</label>
-              <input type="text" name="NAME" required=""  value="{{orderId}}" {{readonly}}/>
-            </li> 
-
-            <li class="form-list__row">
-              <label>Status</label>
-              <input type="text" name="NAME" required=""  value="{{status}}" {{readonly}}/>
-            </li> 
-         
-            <li class="form-list__row">
-              <label>E-Mail</label>
-              <input type="text" name="EMAIL" required=""  value="{{email}}" {{readonly}}/>
-            </li> 
-              
-            <li class="form-list__row">
-              <label>Phone</label>
-              <input type="text" name="MOBILE_NO" required="" value="{{phone}}" {{readonly}}/>
-            </li> 
-           
- 
-            <li class="form-list__row form-list__row--inline">
-  
-               <div>
-                <label> 
-                    Amount
-                </label>
-                 <input type="text" name="TXN_AMOUNT" required="" value="{{amount}}" {{readonly}} />
-              </div>
-
-            </li>
- 
- 
-  
-            <li>
-              <button type="submit" class="button">DONE</button>
-            </li>
-          </ul>
-
- 
- 
-
-
+  <form action="{{action}}" method="POST" class="form-grid form-grid--compact">
+    <input type="hidden" name="ORDER_ID" value="{{orderId}}" />
+    <input type="hidden" name="TXNID" value="{{TXNID}}" />
+    <button type="submit" class="button">Done</button>
+  </form>
+</section>
         </form>
