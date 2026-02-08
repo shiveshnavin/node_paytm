@@ -10,6 +10,7 @@ var PayU = require('./adapters/payu')
 const PaytmChecksum = require('./checksum/PaytmChecksum.js');
 const { stat } = require('fs');
 const { config } = require('process');
+const path = require('path');
 
 let loadingSVG = ` <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin:auto;background:#fff;display:block;" width="200px" height="200px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
 <g transform="rotate(0 50 50)">
@@ -132,7 +133,10 @@ module.exports = function (app, callbacks) {
         return text;
     }
 
-    var vp = __dirname + config.view_path
+    const viewRoot = config.templateDir
+        ? config.templateDir
+        : path.join(__dirname, '..', 'views');
+    var vp = config.resolved_view_path || (viewRoot.endsWith(path.sep) ? viewRoot : viewRoot + path.sep)
 
     module.home = (req, res) => {
 
@@ -478,8 +482,9 @@ module.exports = function (app, callbacks) {
                     openMoneyInstance.renderError(params, e, res)
                 }
             }
-            if (callbacks !== undefined)
+            if (callbacks && typeof callbacks.onStart === 'function') {
                 callbacks.onStart(params['ORDER_ID'], params);
+            }
         }
         else if ((req.body.ORDER_ID !== undefined && req.body.ORDER_ID.length > 2) || gotAllParams) {
 
@@ -720,8 +725,9 @@ module.exports = function (app, callbacks) {
                 }
                 else {
 
-                    if (callbacks !== undefined)
+                    if (callbacks && typeof callbacks.onFinish === 'function') {
                         callbacks.onFinish(req.body.ORDERID, req.body);
+                    }
                     objForUpdate.readonly = "readonly"
                     objForUpdate.action = config.homepage
                     if (returnUrl) {
@@ -1050,8 +1056,9 @@ module.exports = function (app, callbacks) {
                                 res.send({ message: "Error Occured !", ORDERID: paytmResponse.ORDERID, TXNID: paytmResponse.TXNID })
                             }
                             else {
-                                if (callbacks !== undefined)
+                                if (callbacks && typeof callbacks.onFinish === 'function') {
                                     callbacks.onFinish(req.body.ORDER_ID, orderData);
+                                }
                                 res.send(paytmResponse)
                             }
                         });
