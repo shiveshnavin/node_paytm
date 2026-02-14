@@ -14,7 +14,7 @@ interface RawBodyRequest extends Request {
     rawBody?: string;
 }
 
-export function attachViewEngine(app: Application, userConfig: Partial<NPConfig> = {}): void {
+export function attachRawBodyAndEngine(app: Application, userConfig: Partial<NPConfig> = {}): void {
     const config: any = buildConfig(userConfig);
     const saveRawBody = (req: RawBodyRequest, res: Response, buf: Buffer) => {
         req.rawBody = buf && buf.toString();
@@ -39,7 +39,7 @@ export function attachViewEngine(app: Application, userConfig: Partial<NPConfig>
     } as any));
 
     app.set('view engine', 'handlebars');
-    app.set('attachBodyParser', true);
+    app.set('attachRawBodyAndEngine', true);
 }
 
 export function createPaymentMiddleware(
@@ -50,10 +50,10 @@ export function createPaymentMiddleware(
     authenticationMiddleware?: RequestHandler,
     tableNames?: NPTableNames): Router {
 
-    //check attachBodyParser
-    if (!app.get('view engine')) {
-        console.warn('[node-paytmpg]: View engine not attached. Attaching default view engine. Either call attachViewEngine() before createPaymentMiddleware() or ensure that your Express app has a view engine attached.');
-        attachViewEngine(app, userConfig);
+    //check attachRawBodyAndEngine
+    if (!app.get('attachRawBodyAndEngine')) {
+        console.warn('[node-paytmpg]: attachRawBodyAndEngine not attached. Make sure to call attachRawBodyAndEngine() or make sure hbs view engine is set and req.rawBody is available.');
+        attachRawBodyAndEngine(app, userConfig);
     }
 
     const config: any = buildConfig(userConfig);

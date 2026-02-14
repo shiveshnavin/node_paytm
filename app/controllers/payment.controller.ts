@@ -720,6 +720,7 @@ export class PaymentController {
         const openMoneyInstance = this.openMoneyInstance;
 
         console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
+        console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
         console.log("request_headers ", req.originalUrl, JSON.stringify(req.headers));
 
         if (config.paytm_url) {
@@ -743,11 +744,17 @@ export class PaymentController {
 
                     const reqBody = (req as any).rawBody;
                     const signature = req.headers["x-razorpay-signature"];
+                    console.log("Razorpay webhook signature:", signature);
                     if (signature === undefined) {
                         res.status(400).send({ message: "Missing Razorpay signature" });
                         return;
                     }
-                    const signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
+                    let signatureValid
+                    try {
+                        signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
+                    } catch (e) {
+                        signatureValid = false
+                    }
                     if (signatureValid) {
                         if (event === events[0]) {
                             req.body.STATUS = "TXN_SUCCESS";
