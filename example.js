@@ -9,7 +9,7 @@ const app = express();
 // Local SQLite sample DB via multi-db-orm; swap for your own adapter
 const db = new SQLiteDB('test.db');
 
-const payment = createPaymentMiddleware({
+const payment = createPaymentMiddleware(app,{
     host_url: process.env.NP_HOST_URL || 'http://localhost:5543',
     path_prefix: process.env.NP_PATH_PREFIX || '_pay',
     homepage: '/',
