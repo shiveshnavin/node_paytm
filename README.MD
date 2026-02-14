@@ -13,7 +13,10 @@ npm install node-paytmpg multi-db-orm
 ```js
 const express = require("express");
 const { FireStoreDB } = require("multi-db-orm");
-const { attachBodyParser, createPaymentMiddleware } = require("node-paytmpg");
+const {
+  attachRawBodyAndEngine,
+  createPaymentMiddleware,
+} = require("node-paytmpg");
 
 const app = express();
 const db = new FireStoreDB(require("./creds.json"));
@@ -37,7 +40,10 @@ const config = {
   INDUSTRY_TYPE_ID: "Retail",
 };
 
-attachBodyParser(app, config);
+// Make sure to call this before adding any other body parsers
+// this preserves the original body in req.rawBody so it can be used to verify
+// signatures in webhooks especially for razorpay
+attachRawBodyAndEngine(app, config);
 
 const paymentRouter = createPaymentMiddleware(app, config, db);
 app.use("/" + config.path_prefix, paymentRouter);
@@ -47,17 +53,25 @@ app.listen(5544, () => {
 });
 ```
 
-## `attachBodyParser(app, config)`
+## `attachRawBodyAndEngine(app, config)`
 
-Use this before creating the payment middleware.
+> ⚠️ Caution — avoid calling this helper directly in production apps.
+
+Use this only if your application does **not** already configure body parsing or a view engine. In most cases you should **not** call this helper; prefer one of the alternatives below.
 
 What it does:
 
-- Adds JSON and URL-encoded body parsing.
-- Captures `req.rawBody` for webhook signature verification (important for Razorpay webhooks).
-- Sets up handlebars view engine expected by payment pages.
+- Adds JSON and URL-encoded body parsing and captures `req.rawBody` (required for some gateway webhook verifications).
+- Configures Handlebars (`hbs`) view engine and a default layout used by the payment pages.
+- Sets `app.set('attachRawBodyAndEngine', true)` so the middleware knows the setup is present.
 
-If you skip this call, `createPaymentMiddleware` auto-attaches a default parser and logs a warning. For custom body-parser setups, make sure raw request body is still available as `req.rawBody`.
+When _not_ to use it:
+
+- Do **not** call this if your app already defines body-parsing middleware or a view engine — it will override or duplicate global settings and can cause conflicts.
+- Instead, either let `createPaymentMiddleware` auto-attach the required parsers/engine (it logs a warning if missing) or manually ensure `req.rawBody` and a compatible view engine are configured.
+- If you must call it, call it once at app startup and do not call it from sub-apps or multiple times.
+
+If you skip this call, `createPaymentMiddleware` auto-attaches a default parser/engine and logs a warning. For custom body-parser setups, make sure raw request body is still available as `req.rawBody`.
 
 ## How to invoke `createPaymentMiddleware`
 
