@@ -909,7 +909,11 @@ export class PaymentController {
             product_name: 'pname',
             order_id: 'orderId',
             status: 'status',
-            mobile_no: 'phone'
+            mobile_no: 'phone',
+            CLIENT_ID: 'clientId',
+            clientId: 'clientId',
+            WEBHOOK_URL: 'webhookUrl',
+            webhookUrl: 'webhookUrl',
         };
 
         Object.keys(fieldMap).forEach((key) => {
