@@ -14,9 +14,12 @@ const buildConfig = require('./lib/config/buildConfig');
  * @param {object} db - optional multi-db-orm instance; if omitted and db_url is provided, MongoDB is used
  * @returns {import('express').Application} configured sub-application ready to mount
  */
-function createPaymentMiddleware(userConfig = {}, db) {
+function createPaymentMiddleware(userConfig = {}, db, authenticationMiddleware) {
     const config = buildConfig(userConfig);
     const subApp = express();
+    if(!authenticationMiddleware) {
+        authenticationMiddleware = (req, res, next) => next();
+    }
 
     // expose config + optional db handle for downstream controllers
     subApp.set('np_config', config);
@@ -68,15 +71,16 @@ function createPaymentMiddleware(userConfig = {}, db) {
         console.log('Received request at', req.originalUrl);
         next();
     });
-    subApp.all('/init', pc.init);
-    subApp.all('/callback', pc.callback);
-    subApp.all('/api/webhook', pc.webhook);
-    subApp.all('/api/status', pc.status);
-    subApp.all('/api/createTxn/token', pc.createTxnToken);
-    subApp.all('/api/createTxn', pc.createTxn);
-    subApp.all('/', pc.init);
+    subApp.all('/init',authenticationMiddleware, pc.init);
+    subApp.all('/callback',authenticationMiddleware, pc.callback);
+    subApp.all('/api/webhook',authenticationMiddleware, pc.webhook);
+    subApp.all('/api/status',authenticationMiddleware, pc.status);
+    subApp.all('/api/transactions',authenticationMiddleware, pc.getTransactions);
+    subApp.all('/api/createTxn/token',authenticationMiddleware, pc.createTxnToken);
+    subApp.all('/api/createTxn',authenticationMiddleware, pc.createTxn);
+    subApp.all('/', authenticationMiddleware, pc.init);
 
-    subApp.use(express.static(path.join(__dirname, 'public')), pc.init);
+    subApp.use(express.static(path.join(__dirname, 'public')), authenticationMiddleware, pc.init);
 
     return subApp;
 }

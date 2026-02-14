@@ -919,6 +919,20 @@ module.exports = function (app, callbacks) {
 
     module.createTxn = (req, res) => {
 
+        // mandayory field
+        const requiredFields = ['NAME', 'EMAIL', 'MOBILE_NO', 'TXN_AMOUNT', 'PRODUCT_NAME'];
+        const checkedFields = [];
+        let gotAllParams = true;
+        requiredFields.forEach(field => {
+            if (!req.body[field]) {
+                gotAllParams = false;
+                checkedFields.push(field);
+            }
+        })
+        if (!gotAllParams) {
+            res.status(400).send({ message: "Missing required fields", missing: checkedFields });
+            return;
+        }
 
         useController.create({ name: req.body.NAME, email: req.body.EMAIL, phone: req.body.MOBILE_NO },
             async function (user) {
@@ -1050,11 +1064,84 @@ module.exports = function (app, callbacks) {
 
     };
 
+    // optional user
+    module.getTransactions = async (req, res) => {
+        // parameters can be from query or body
+        // MID, MOBILE_NO, PRODUCT_NAME, EMAIL, NAME, limit, offset
+        const params = { ...(req.query || {}), ...(req.body || {}) };
+
+        // Basic authz guard if caller supplies MID and it mismatches current config
+        if (params.MID && config.MID && params.MID !== config.MID) {
+            return res.status(403).send({ message: 'MID mismatch' });
+        }
+
+        // Build query map from incoming fields to db columns
+        const query = {};
+        const fieldMap = {
+            MOBILE_NO: 'phone',
+            PRODUCT_NAME: 'pname',
+            EMAIL: 'email',
+            NAME: 'name',
+            ORDER_ID: 'orderId',
+            ORDERID: 'orderId',
+            STATUS: 'status'
+        };
+
+        Object.keys(fieldMap).forEach((key) => {
+            if (params[key]) {
+                query[fieldMap[key]] = params[key];
+            }
+        });
+
+        // Pagination
+        const limit = Math.min(parseInt(params.limit, 10) || 20, 100);
+        const offset = Math.max(parseInt(params.offset, 10) || 0, 0);
+
+        try {
+            let transactions = [];
+
+            if (usingMultiDbOrm) {
+                const all = await Transaction.db.get(Transaction.modelname, query, {
+                    sort: [{ field: 'time', order: 'DESC' }]
+                });
+                const safeAll = Array.isArray(all) ? all : [];
+                transactions = safeAll.slice(offset, offset + limit);
+            }
+            else {
+                transactions = await Transaction.find(query)
+                    .sort({ time: -1 })
+                    .skip(offset)
+                    .limit(limit)
+                    .lean();
+            }
+
+            return res.send({
+                limit,
+                offset,
+                count: transactions.length,
+                transactions
+            });
+        }
+        catch (err) {
+            console.log('getTransactions error', err);
+            return res.status(500).send({ message: 'Failed to fetch transactions', error: err.message });
+        }
+    }
+
 
     module.status = (req, res) => {
 
+        if (!req.body.ORDERID && req.query.ORDERID) {
+            req.body.ORDERID = req.query.ORDERID
+        }
         if (!req.body.ORDER_ID && req.query.ORDER_ID) {
             req.body.ORDER_ID = req.query.ORDER_ID
+        }
+        if(!req.body.ORDER_ID && req.body.ORDERID){
+            req.body.ORDER_ID = req.body.ORDERID
+        }
+        if(!req.body.ORDER_ID){
+            return res.status(400).send({ message: "Missing ORDER_ID" })
         }
         var myquery = { orderId: req.body.ORDER_ID };
         Transaction.findOne(myquery, async function (err, orderData) {
@@ -1062,6 +1149,10 @@ module.exports = function (app, callbacks) {
 
             if (err) {
                 res.send(err)
+                return
+            }
+            else if (!orderData) {
+                res.send({ message: "Order Not Found or not initiated yet!", ORDER_ID: req.body.ORDER_ID })
                 return
             }
             if (orderData.status === "INITIATED") {
