@@ -1,245 +1,195 @@
-## Node JS Payments Easy Integration
+## node-paytmpg
 
-[![NPM Publish](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/npm-publish.yml)
-[![Node.js CI](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml/badge.svg)](https://github.com/shiveshnavin/node_paytm/actions/workflows/nodejs.yml)
+Express middleware for integrating Paytm / Razorpay / PayU / Open Money payments with built-in checkout pages and APIs.
 
-Support for : 
- - Paytm
- - RazorPay
- - Open Money
- 
-Does all the hardwork for you while integrating payments in any express app. Comes with inbuilt UI and REST APIs for lightning fast development and prototyping .
+## Install
 
-## Example 
-
-Demo : https://node-paytm.herokuapp.com/_pay/init
-
-Use any Card Details or Net Banking 
-username : test
-password : test
-
-Example App Sourcecode : https://github.com/shiveshnavin/payment-gateway-example
-
-### Requirments
-
-1. MongoDB / Firestore / SQlite
-2. Your Merchant Credentials 
-3. Express . This only works with NodeJS express server
-
-You can get your paytm credentials here
-https://developer.paytm.com/docs
-
-
-
-![Alt text](public/start.png "Start")
-
-![Alt text](public/start2.png "Start")
-
-![Alt text](public/pay.png "Start")
-
-![Alt text](public/stat.png "Start")
- 
-
-### Install
-
-```code
-npm install node-paytmpg --save
+```bash
+npm install node-paytmpg multi-db-orm
 ```
 
-In your main nodejs file set configuration in express app
+## Quick start (current API)
 
+```js
+const express = require("express");
+const { FireStoreDB } = require("multi-db-orm");
+const { attachBodyParser, createPaymentMiddleware } = require("node-paytmpg");
 
-### Paytm
-```code
-host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
-paytm_url : For Test "https://securegw-stage.paytm.in" and for Production "https://securegw.paytm.in"
-MID : Your Paytm Merchant ID
-Website : "WEBSTAGING" for Test and for Production , the website you entered while activation
-KEY : Your Unique Key from Paytm used for hashing 
-CHANNEL_ID : Know More at Paytm Docs
-INDUSTRY_TYPE_ID : Know More at Paytm Docs
-homepage : Homepage of your website where user can go after payment confirmation page
-path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
-db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
-id_length: Length of Order ID and User ID
+const app = express();
+const db = new FireStoreDB(require("./creds.json"));
 
-```
+const config = {
+  host_url: "http://127.0.0.1:5544",
+  path_prefix: "pay",
+  homepage: "/",
 
-### Razorpay
-In case you want to use razorpay , Use the below configuration
-```
-host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
-razor_url : https://api.razorpay.com/
-MID : Your Paytm Merchant ID
-KEY : Your generated API Key
-SECRET : Your API Key secret
-homepage : Homepage of your website where user can go after payment confirmation page
-path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
-db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
-id_length: Length of Order ID and User ID
+  // enable one gateway
+  payu_url: "https://test.payu.in/_payment",
+  // paytm_url: 'https://securegw-stage.paytm.in',
+  // razor_url: 'https://api.razorpay.com/',
+  // open_money_url: 'https://sandbox-icp-api.bankopen.co/api',
 
-```
+  MID: "YOUR_MID",
+  WEBSITE: "WEBSTAGING",
+  KEY: "YOUR_KEY",
+  SECRET: "YOUR_SECRET",
+  CHANNEL_ID: "WAP",
+  INDUSTRY_TYPE_ID: "Retail",
+};
 
-### For Open Money
-In case you want to use Open Money https://app.open.money/settings/developer-api/api . Use the below configuration
-```
-host_url : Host URL of your server . This will be used to redirect user after payment
-view_path : Ignore and dont change unless you know what you are doing . This is the useful in case you want to modify payment init page UI from node_paytm_pg library
-open_money_url : SANDBOX https://sandbox-icp-api.bankopen.co/api OR LIVE https://icp-api.bankopen.co/api
-KEY : Your generated API Key
-SECRET : Your API secret
-homepage : Homepage of your website where user can go after payment confirmation page
-path_prefix : All node_paytm_pg apis/pages will be available relative to this path prefix
-db_url : Your MongoDB url in case you want to use legacy mongodb connection . You can use multidborm to support MongoDB/Firestore/Sqlite
-id_length: Length of Order ID and User ID (Optional)
+attachBodyParser(app, config);
 
-```
+const paymentRouter = createPaymentMiddleware(app, config, db);
+app.use("/" + config.path_prefix, paymentRouter);
 
-
-Place these 2 statements in your main nodejs file before calling app.listen(..)
-
-```javascript
-
-/*** 
- * Uncomment in case you want to use multidborm to support 
- * MongoDB / Firestore / SQlite
- * https://www.npmjs.com/package/multi-db-orm
- * Refer to example.js
-
- const { MultiDbORM, FireStoreDB, MongoDB, SQLiteDB, Sync } = require("multi-db-orm");
-var mongodb = new MongoDB(MONGOURL);
-app.multidborm = mongodb;
-
-*/
-
-app.set('np_config', {
-    "host_url":"http://127.0.0.1:5542", 
-    "view_path":"/../views/",
-    "MID":"XXXXXXXXXXX",
-    "WEBSITE":"WEBSTAGING",
-    "KEY":"XXXXXXXXXXX",
-    "CHANNEL_ID":"WEB", 
-    "INDUSTRY_TYPE_ID":"Retail",
-    "homepage":"/_pay/home",
-    "path_prefix":"_pay",
-    "db_url":"mongodb://user:password123@db.host.com:5551/dbname_123", // Remove this property in case you want to use multidborm
-    "id_length":10,
-    "logo":"/favicon.ico",
-    "theme_color":"#3399cc",
-
-    "paytm_url":"https://securegw-stage.paytm.in", // Only For PayTm
-    
-    "razor_url":"https://api.razorpay.com/", // Only For RazorPay
-    "SECRET":"XXXXXXXXXXX", //Only For RazorPay , Your razorpay api key secret
-
+app.listen(5544, () => {
+  console.log("Server started on 5544");
 });
-
-require('node-paytmpg')(app,express)
-
 ```
 
-### Basic Usage 
- 
+## `attachBodyParser(app, config)`
 
-#### Method 1 : Ask user to enter Details
-```
-simply open page /_pay/init in browser
-```
-#### Method 2 : Post these params to /_pay/init using browser form
-```
-NAME
-EMAIL
-MOBILE_NO
-PRODUCT_NAME
-TXN_AMOUNT
-```
+Use this before creating the payment middleware.
 
-####  Method 3 : Using API . Useful for Integrating on Mobile App
-```
-Create an Order by posting to URL /_pay/api/createTxn
+What it does:
 
-NAME
-EMAIL
-MOBILE_NO
-PRODUCT_NAME
-TXN_AMOUNT
+- Adds JSON and URL-encoded body parsing.
+- Captures `req.rawBody` for webhook signature verification (important for Razorpay webhooks).
+- Sets up handlebars view engine expected by payment pages.
 
-This will generate an `orderId` and `payurl` in response . 
-Now Post to  /_pay/init using browser form
+If you skip this call, `createPaymentMiddleware` auto-attaches a default parser and logs a warning. For custom body-parser setups, make sure raw request body is still available as `req.rawBody`.
 
-NAME
-EMAIL
-MOBILE_NO
-ORDER_ID
+## How to invoke `createPaymentMiddleware`
 
-OR
-Simply open `payurl` in your browser
+Signature:
 
-```
-APIS
-```
-For Checking Status
-
-method : POST
-path : /_pay/api/status
-Params:
-ORDER_ID
-
+```ts
+createPaymentMiddleware(
+  app,
+  userConfig,
+  db,
+  callbacks?,
+  authenticationMiddleware?,
+  tableNames?
+)
 ```
 
-### Advanced  
+Required params:
 
-You can use callbacks to sync node-paytmpg transactions with you own database using .
+- `app`: your Express app instance.
+- `userConfig`: payment config.
+- `db`: `multi-db-orm` database instance.
 
+Optional params:
+
+- `callbacks`: `{ onStart(orderId, txn), onFinish(orderId, txn) }`.
+- `authenticationMiddleware`: middleware to protect all payment routes.
+- `tableNames`: override default table/collection names.
+
+Mounting:
+
+- Router paths are relative (`/init`, `/callback`, `/api/createTxn`, etc.).
+- Mount with `app.use('/' + config.path_prefix, router)`.
+- Keep mount path aligned with `config.path_prefix` so generated `payurl` is correct.
+
+## Request fields: `RETURN_URL` and `WEBHOOK_URL`
+
+`RETURN_URL` and `WEBHOOK_URL` are optional fields accepted in payment-init/create APIs and stored per transaction.
+
+### `RETURN_URL`
+
+If provided:
+
+- User is redirected to this URL after payment update instead of only rendering library result page.
+- Query params are appended by the middleware:
+  - `status` (for example `TXN_SUCCESS`, `TXN_FAILURE`, `FAILED`)
+  - `ORDERID`
+  - `TXNID` (when available)
+  - `message` in some failure cases
+
+Examples:
+
+- `https://your-app.com/payment/return?status=TXN_SUCCESS&ORDERID=...&TXNID=...`
+- If URL already has query string, middleware appends with `&`.
+
+### `WEBHOOK_URL`
+
+If provided:
+
+- Middleware posts transaction result payload to this URL on status update.
+- Also used for some error states (for example, transaction not found).
+
+Typical payload includes transaction/order fields (`orderId`, `txnId`, `status`, etc.) depending on update stage.
+
+## Create transaction API
+
+Endpoint:
+
+```http
+POST /{path_prefix}/api/createTxn
 ```
-var PayTMPG=require('node-paytmpg')(app,express,{
 
-    onStart:function(orderid,data)
-    {
-        console.log("Payment has started \n",orderid,data)
-    },
-    onFinish:function(orderid,data)
-    {
-        console.log("Payment Has finished \n",orderid,data)
+Required body fields:
 
-    }
+- `NAME`
+- `EMAIL`
+- `MOBILE_NO`
+- `TXN_AMOUNT`
+- `PRODUCT_NAME`
 
-})
+Optional body fields:
 
-var Transaction=PayTMPG.Transaction;
-var User=PayTMPG.User;
+- `RETURN_URL`
+- `WEBHOOK_URL`
+- `EXTRA`
 
- Transaction.findOne({orderId:req.body.ORDERID},function(err,data){
+Response includes generated transaction info and `payurl`:
 
-	console.log(data)	
-
-  })
-
-
+```json
+{
+  "orderId": "...",
+  "status": "INITIATED",
+  "payurl": "http://host/{path_prefix}/init?to=..."
+}
 ```
 
-### Webhooks
+## Core routes
 
-Webhooks can issued at at `/_pay/api/webhook` and are useful for payments captured late.
+All routes below are mounted under `/{path_prefix}`:
 
-#### For razorpay webhook
-Make sure to use the same secret in your webhook as the merchant secret.
-https://razorpay.com/docs/webhooks/
+- `GET|POST /init`
+- `GET|POST /callback`
+- `GET|POST /api/webhook`
+- `GET|POST /api/status`
+- `GET|POST /api/transactions`
+- `GET|POST /api/createTxn`
+- `GET|POST /api/createTxn/token`
 
-#### For paytm
-Nothing extra needed
-https://developer.paytm.com/docs/callback-and-webhook/?ref=callbackWebhook
+## Config summary
 
-#### For Open Money
-Nothing extra needed
-https://docs.bankopen.com/reference/webhook-url
+Common:
 
+- `host_url`
+- `path_prefix`
+- `KEY`, `SECRET`
 
-License : GPL
+Gateway-specific:
 
-Donate : 
-[<img src="https://www.iconfinder.com/icons/379454/download/png/128">](https://www.instamojo.com/@shiveshnavin)
+- Paytm: `paytm_url`, `MID`, `WEBSITE`, `CHANNEL_ID`, `INDUSTRY_TYPE_ID`
+- Razorpay: `razor_url`, `KEY`, `SECRET`
+- PayU: `payu_url`, `KEY`, `SECRET`
+- Open Money: `open_money_url`, `KEY`, `SECRET`
 
+UI / behavior:
 
+- `brand`, `logo`, `theme`, `themeName`, `templateDir`, `id_length`
+
+## Notes
+
+- Configure at least one gateway URL: `paytm_url`, `razor_url`, `payu_url`, or `open_money_url`.
+- `host_url` + `path_prefix` are used to build checkout links.
+- This package is designed for Express apps.
+
+## License
+
+MIT

@@ -13,18 +13,18 @@
   <link rel="shortcut icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Crect%20width='16'%20height='16'%20rx='3'%20fill='%23ff5722'/%3E%3C/svg%3E" />
   <style>
     :root {
-      --color-primary: {{theme.primary}};
-      --color-accent: {{theme.accent}};
-      --color-surface: {{theme.surface}};
-      --color-text: {{theme.text}};
-      --color-success: {{theme.success}};
-      --color-danger: {{theme.danger}};
+      --color-primary: {{#if theme.primary}}{{theme.primary}}{{else}}#2f8bff{{/if}};
+      --color-accent: {{#if theme.accent}}{{theme.accent}}{{else}}#5ce1e6{{/if}};
+      --color-surface: {{#if theme.surface}}{{theme.surface}}{{else}}#0f1021{{/if}};
+      --color-text: {{#if theme.text}}{{theme.text}}{{else}}#e9ecf2{{/if}};
+      --color-success: {{#if theme.success}}{{theme.success}}{{else}}#24cf5f{{/if}};
+      --color-danger: {{#if theme.danger}}{{theme.danger}}{{else}}#ff6b6b{{/if}};
       --color-outline: rgba(255,255,255,0.08);
       --radius: 14px;
     }
   </style>
 </head>
-<body class="theme-{{themeName}}">
+<body class="theme-{{#if themeName}}{{themeName}}{{else}}dark{{/if}}">
   <div class="shell">
     <header class="shell__header">
       <div class="brand">
