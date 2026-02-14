@@ -893,12 +893,6 @@ export class PaymentController {
         // MID, MOBILE_NO, PRODUCT_NAME, EMAIL, NAME, limit, offset
         const params = { ...(req.query || {}), ...(req.body || {}) };
 
-        // Basic authz guard if caller supplies MID and it mismatches current config
-        if (params.MID && this.config.MID && params.MID !== this.config.MID) {
-            res.status(403).send({ message: 'MID mismatch' });
-            return
-        }
-
         // Build query map from incoming fields to db columns
         const query: Record<string, any> = {};
         const fieldMap: Record<string, string> = {
@@ -929,19 +923,18 @@ export class PaymentController {
         const offset = Math.max(parseInt(params.offset, 10) || 0, 0);
 
         try {
-            let transactions = [];
 
             const all = await this.db.get(this.tableNames.TRANSACTION, query, {
-                sort: [{ field: 'time', order: 'desc' }]
+                sort: [{ field: 'time', order: 'desc' }],
+                limit: limit,
+                offset: offset
             });
-            const safeAll = Array.isArray(all) ? all : [];
-            transactions = safeAll.slice(offset, offset + limit);
 
             res.send({
                 limit,
                 offset,
-                count: transactions.length,
-                transactions
+                count: all.length,
+                transactions: all
             });
         }
         catch (err: any) {
