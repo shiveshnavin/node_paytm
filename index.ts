@@ -14,7 +14,7 @@ interface RawBodyRequest extends Request {
     rawBody?: string;
 }
 
-export function attachBodyParser(app: Application, userConfig: Partial<NPConfig> = {}): void {
+export function attachViewEngine(app: Application, userConfig: Partial<NPConfig> = {}): void {
     const config: any = buildConfig(userConfig);
     const saveRawBody = (req: RawBodyRequest, res: Response, buf: Buffer) => {
         req.rawBody = buf && buf.toString();
@@ -51,9 +51,9 @@ export function createPaymentMiddleware(
     tableNames?: NPTableNames): Router {
 
     //check attachBodyParser
-    if (!app.get('attachBodyParser')) {
-        console.error('!!! Warning from node-paytmpg !!!: Body parser not attached by calling `attachBodyParser(app, config)`. Attaching default body parser. Please attach your own body parser if you have custom requirements. but make sure `rawBody` is attached to the request object for webhook verification.');
-        attachBodyParser(app, userConfig);
+    if (!app.get('view engine')) {
+        console.warn('[node-paytmpg]: View engine not attached. Attaching default view engine. Either call attachViewEngine() before createPaymentMiddleware() or ensure that your Express app has a view engine attached.');
+        attachViewEngine(app, userConfig);
     }
 
     const config: any = buildConfig(userConfig);
