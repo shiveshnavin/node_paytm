@@ -2,14 +2,16 @@
   "name": "node-paytmpg",
   "version": "7.0.1",
   "description": "Payment Gateway Integration using NodeJS",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "start": "node example.js",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build:ts": "tsc -p tsconfig.json",
     "copy:views": "copyfiles -u 1 \"app/views/**/*\" dist/app",
     "copy:public": "copyfiles -u 1 \"public/**/*\" dist/public",
-    "build": "npm-run-all clean build:ts copy:views copy:public"
+    "build": "npm-run-all clean build:ts copy:views copy:public",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -54,5 +56,12 @@
     "firebase-admin": "^13.6.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3"
-  }
+  },
+  "files": [
+    "dist",
+    "public",
+    "app/views",
+    "README.MD",
+    "LICENSE"
+  ]
 }
