@@ -221,23 +221,21 @@ export default class OpenMoney {
   }
 
   renderProcessingPage(params: AnyObject, pmttoken: AnyObject, res: AnyObject, loadingSVG: string) {
+    const headScript = `<script src="${this.config.script_url}"></script>`;
+    const bodyScript = `<script>triggerLayer();</script>`;
+    const html = require('../htmlhelper').buildProcessingPageHtml(pmttoken.html, loadingSVG, 'Merchant Checkout Page', headScript, bodyScript);
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(`<html><head><title>Merchant Checkout Page</title>\n        <script src="${this.config.script_url}"></script>\n        </head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${pmttoken.html}<br><br>${loadingSVG}</center><script>triggerLayer();</script></body></html>`);
+    res.write(html);
     res.end();
   }
 
   renderError(params: AnyObject, error: any, res: AnyObject) {
     console.log('ERROR:::', error, '\n');
     res.status(500);
-    let form_fields = '';
-    const errorResp = { TXNID: 'na', STATUS: 'TXN_FAILURE', CANCELLED: 'cancelled', ORDERID: params['ORDER_ID'] };
-    for (const x in errorResp) {
-      form_fields += "<input type='hidden' name='" + x + "' value='" + (errorResp as AnyObject)[x] + "' >";
-    }
-    form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + params['CHECKSUM'] + "' >";
-
+    const errorResp = { TXNID: 'na', STATUS: 'TXN_FAILURE', CANCELLED: 'cancelled', ORDERID: params['ORDER_ID'], CHECKSUMHASH: params['CHECKSUM'] };
+    const html = require('../htmlhelper').buildAutoPostFormHtml(params['CALLBACK_URL'], errorResp);
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(`<html>\n\n                    <head>\n                        <title>Merchant Checkout Error</title>\n                    </head>\n                    \n                    <body>\n                        <center>\n                            <h1>Something went wrong. Please wait you will be redirected automatically...</h1>\n                        </center>\n                        <form method="post" action="${params['CALLBACK_URL']}" name="f1">${form_fields}</form>\n                        <script type="text/javascript">document.f1.submit();</script>\n                    </body>\n        \n        </html>`);
+    res.write(html);
     res.end();
   }
 }

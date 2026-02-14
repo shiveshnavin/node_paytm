@@ -32,7 +32,7 @@ export class NPUserController {
                 if (userData.email && userData.email.indexOf("@") !== -1) objForUpdate.email = userData.email;
                 if (userData.phone && userData.phone.length > 2) objForUpdate.phone = userData.phone;
                 if (userData.name && userData.name.length > 2) objForUpdate.name = userData.name;
-                const newvalues = { $set: objForUpdate };
+                const newvalues = objForUpdate;
 
                 try {
                     await this.db.update(this.tableName, myquery, newvalues);

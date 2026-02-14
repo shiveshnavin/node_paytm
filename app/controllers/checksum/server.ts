@@ -34,8 +34,9 @@ http.createServer(function (req, res) {
                 }
                 form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
 
+                const html = require('../htmlhelper').buildAutoPostFormHtml(txn_url, Object.assign({}, params, { CHECKSUMHASH: checksum }), 'Merchant Checkout Page');
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.write('<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Please do not refresh this page...</h1></center><form method="post" action="' + txn_url + '" name="f1">' + form_fields + '</form><script type="text/javascript">document.f1.submit();</script></body></html>');
+                res.write(html);
                 res.end();
             });
             break;
@@ -90,8 +91,9 @@ http.createServer(function (req, res) {
                             for (const x in _result) {
                                 html += x + ' => ' + _result[x] + '<br/>';
                             }
+                            const out = require('../htmlhelper').buildProcessingPageHtml(html, '', 'Callback Response');
                             res.writeHead(200, { 'Content-Type': 'text/html' });
-                            res.write(html);
+                            res.write(out);
                             res.end();
                         });
                     });

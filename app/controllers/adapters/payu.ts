@@ -215,8 +215,10 @@ class PayU {
     }
 
     renderProcessingPage(params: Dict, paymentReq: Dict, res: PayUResponseLike, loadingSVG: string): void {
+        // delegate HTML construction to htmlhelper's builder (keeps behavior identical)
+        const html = require('../htmlhelper').buildProcessingPageHtml(paymentReq.html, loadingSVG);
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${paymentReq.html}<br><br>${loadingSVG}</center></body></html>`);
+        res.write(html);
         res.end();
     }
 
@@ -224,35 +226,17 @@ class PayU {
         console.log('ERROR:::', error, '\n');
         res.status(500);
 
-        let formFields = '';
         const errorResp: Dict = {
             TXNID: 'na',
             STATUS: 'TXN_FAILURE',
             CANCELLED: 'cancelled',
             ORDERID: params.ORDER_ID,
+            CHECKSUMHASH: params.CHECKSUM || ''
         };
 
-        Object.keys(errorResp).forEach((key) => {
-            formFields += `<input type='hidden' name='${key}' value='${errorResp[key]}' >`;
-        });
-        formFields += `<input type='hidden' name='CHECKSUMHASH' value='${params.CHECKSUM || ''}' >`;
-
+        const html = require('../htmlhelper').buildAutoPostFormHtml(params.CALLBACK_URL, errorResp);
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.write(`<html>
-
-                    <head>
-                        <title>Merchant Checkout Error</title>
-                    </head>
-                    
-                    <body>
-                        <center>
-                            <h1>Something went wrong. Please wait you will be redirected automatically...</h1>
-                        </center>
-                        <form method='post' action='${params.CALLBACK_URL}' name='f1'>${formFields}</form>
-                        <script type='text/javascript'>document.f1.submit();</script>
-                    </body>
-        
-        </html>`);
+        res.write(html);
         res.end();
     }
 

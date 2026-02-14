@@ -13,7 +13,7 @@ import { Request, Response } from 'express';
 import { Utils } from '../utils/utils';
 import { LoadingSVG } from './static/loadingsvg';
 import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction } from '../models';
-import { createPaytmJsCheckoutHtml } from './adapters/paytm';
+import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
 
 const IDLEN = 14;
 
@@ -162,7 +162,7 @@ export class PaymentController {
 
     home(req: Request, res: Response) {
         packageInfo.repository.url = packageInfo.repository.url.replace('git+', '')
-        res.render(this.viewPath + "home.hbs", packageInfo)
+        return renderView(req, res, this.viewPath + "home.hbs", packageInfo);
     }
 
 
@@ -274,119 +274,36 @@ export class PaymentController {
                         paytmJsToken.MID = params['MID'];
                         paytmJsToken.CALLBACK_URL = params['CALLBACK_URL'];
 
-                        return res.send(createPaytmJsCheckoutHtml(paytmJsToken, this.config));
+                        return renderPaytmJsCheckout(req, res, paytmJsToken, this.config);
                     }
                     else {
                         console.log('ERROR:::', resp.status, '\n', body);
                         res.status(500);
-                        var form_fields = '';
-                        let errorResp: Record<string, any> = {
+                        const errorResp: Record<string, any> = {
                             TXNID: 'na',
                             STATUS: 'TXN_FAILURE',
                             CANCELLED: 'cancelled',
-                            ORDERID: params['ORDER_ID']
+                            ORDERID: params['ORDER_ID'],
+                            CHECKSUMHASH: checksum
                         };
-                        for (var x in errorResp) {
-                            form_fields += "<input type='hidden' name='" + x + "' value='" + errorResp[x] + "' >";
-                        }
-                        form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
-
-                        res.writeHead(200, { 'Content-Type': 'text/html' });
-                        res.write(`<html>
-
-                                        <head>
-                                            <title>Merchant Checkout Error</title>
-                                        </head>
-                                        
-                                        <body>
-                                            <center>
-                                                <h1>Something went wrong. Please wait you will be redirected automatically...</h1>
-                                            </center>
-                                            <form method="post" action="${params['CALLBACK_URL']}" name="f1">${form_fields}</form>
-                                            <script type="text/javascript">document.f1.submit();</script>
-                                        </body>
-                            
-                            </html>`);
-                        res.end();
+                        return sendAutoPostForm(req, res, params['CALLBACK_URL'], errorResp);
                     }
                 } catch (err) {
                     console.log('ERROR:::', err);
                     res.status(500);
-                    var form_fields = '';
-                    let errorResp: Record<string, any> = {
+                    const errorResp: Record<string, any> = {
                         TXNID: 'na',
                         STATUS: 'TXN_FAILURE',
                         CANCELLED: 'cancelled',
-                        ORDERID: params['ORDER_ID']
+                        ORDERID: params['ORDER_ID'],
+                        CHECKSUMHASH: checksum
                     };
-                    for (var x in errorResp) {
-                        form_fields += "<input type='hidden' name='" + x + "' value='" + errorResp[x] + "' >";
-                    }
-                    form_fields += "<input type='hidden' name='CHECKSUMHASH' value='" + checksum + "' >";
-
-                    res.writeHead(200, { 'Content-Type': 'text/html' });
-                    res.write(`<html>
-
-                                        <head>
-                                            <title>Merchant Checkout Error</title>
-                                        </head>
-                                        
-                                        <body>
-                                            <center>
-                                                <h1>Something went wrong. Please wait you will be redirected automatically...</h1>
-                                            </center>
-                                            <form method="post" action="${params['CALLBACK_URL']}" name="f1">${form_fields}</form>
-                                            <script type="text/javascript">document.f1.submit();</script>
-                                        </body>
-                            
-                            </html>`);
-                    res.end();
+                    return sendAutoPostForm(req, res, params['CALLBACK_URL'], errorResp);
                 }
 
             }
             else if (this.config.razor_url) {
-
-                let fail = `<div style="display:none">
-                
-                <form method="post" action="${params['CALLBACK_URL']}" id="fail">
-                <input name="razorpay_order_id" value="${params['ORDER_ID']}" hidden="true"/>
-                </form> 
-                </div>`;
-                let html = `
-            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-            <script>
-            var options = {
-                "key": "${this.config.KEY}", 
-                "amount": "${parseFloat(params['TXN_AMOUNT']) * 100}", 
-                "currency": "INR",
-                "name": "${params['PRODUCT_NAME']}",
-                "description": "Order # ${params['ORDER_ID']}",
-                "image": "${this.config.logo}",
-                "order_id": "${params['ORDER_ID']}",
-                "callback_url": "${params['CALLBACK_URL']}",
-                "prefill": {
-                    "name": "${params['NAME']}",
-                    "email": "${params['EMAIL']}",
-                    "contact": "${params['MOBILE_NO']}"
-                },
-                "theme": {
-                    "color": "${this.config.theme_color}"
-                }, 
-                "modal": {
-                    "ondismiss": function(){
-                        document.getElementById("fail").submit()
-                    }
-                }
-            };
-            var rzp1 = new Razorpay(options);
- 
-            rzp1.open();
-            </script>`;
-
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.write(`<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Processing ! Please do not refresh this page...</h1><br>${html}<br>${fail}<br>${LoadingSVG}</center></body></html>`);
-                res.end();
-
+                return renderRazorpayCheckout(req, res, params, this.config, LoadingSVG);
             }
             else if (this.config.payu_url) {
                 const payuRequest = this.payuInstance.generatePaymentRequest(params);
@@ -441,7 +358,7 @@ export class PaymentController {
 
 
                 const showConfirmation = (checksum = '') => {
-                    res.render(vp + "init.hbs", {
+                    return renderView(req, res, vp + "init.hbs", {
                         path_prefix: config.path_prefix,
                         action: "/" + config.path_prefix + "/init",
                         readonly: 'readonly',
@@ -459,7 +376,7 @@ export class PaymentController {
                         CHANNEL_ID: params['CHANNEL_ID'],
                         CALLBACK_URL: params['CALLBACK_URL'],
                         CHECKSUMHASH: checksum
-                    })
+                    });
                 }
 
 
@@ -563,7 +480,7 @@ export class PaymentController {
         else {
 
 
-            res.render(this.viewPath + "init.hbs", {
+            return renderView(req, res, this.viewPath + "init.hbs", {
 
                 path_prefix: this.config.path_prefix,
                 action: "/" + this.config.path_prefix + "/init",
@@ -584,7 +501,7 @@ export class PaymentController {
                 CALLBACK_URL: config.CALLBACK_URL,
                 CHECKSUMHASH: ''
 
-            })
+            });
 
         }
 
@@ -653,7 +570,7 @@ export class PaymentController {
                 return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
             }
 
-            res.render(vp + "result.hbs", {
+            renderView(req, res, vp + "result.hbs", {
                 path_prefix: config.path_prefix,
                 ...objForUpdate
             });
@@ -693,7 +610,7 @@ export class PaymentController {
             const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
             return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
         }
-        res.render(vp + "result.hbs", {
+        renderView(req, res, vp + "result.hbs", {
             path_prefix: config.path_prefix,
             ...objForUpdate
         });
@@ -741,7 +658,12 @@ export class PaymentController {
             }
 
         } else if (config.razor_url) {
-
+            let orderid = req.body.razorpay_order_id || req.query.ORDERID || req.query.order_id;
+            let liveResonse = null as any
+            if (orderid) {
+                liveResonse = await this.razorPayInstance.orders.fetch(orderid).catch(() => null);
+                req.body.extras = liveResonse
+            }
             if (req.body.razorpay_payment_id) {
                 result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
                     req.body.razorpay_payment_id,
@@ -758,7 +680,7 @@ export class PaymentController {
                     const orderId = JSON.parse(req.body.error.metadata).order_id
                     req.body.razorpay_order_id = orderId
                 }
-                req.body.STATUS = 'TXN_FAILURE'
+                req.body.STATUS = liveResonse?.attempts ? 'TXN_FAILURE' : 'CANCELLED';
                 req.body.ORDERID = req.body.razorpay_order_id || req.query.order_id
                 isCancelled = true;
             }
