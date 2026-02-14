@@ -1,6 +1,6 @@
 const express = require('express');
 const { SQLiteDB } = require('multi-db-orm');
-const { createPaymentMiddleware } = require('./index');
+const { createPaymentMiddleware } = require('./dist');
 
 try { require('dotenv').config(); } catch (e) { }
 

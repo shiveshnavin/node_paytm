@@ -29,6 +29,7 @@ export interface NPTransaction {
     extra: string
     readonly?: string,
     txnId?: string,
+    clientId: string,
     returnUrl: string
     webhookUrl: string
 }

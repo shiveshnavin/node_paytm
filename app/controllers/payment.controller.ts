@@ -2,10 +2,9 @@ import { MultiDbORM } from 'multi-db-orm';
 import packageInfo from '../../package.json';
 import checksum_lib from './checksum/checksum';
 import PaytmChecksum from './checksum/PaytmChecksum';
+import * as crypto from 'crypto';
 import path from 'path';
 import axios from 'axios';
-//@ts-ignore
-import nodeBase64 from 'nodejs-base64-converter';
 import RazorPay from 'razorpay';
 import OpenMoney from './adapters/open_money';
 import PayU from './adapters/payu';
@@ -49,6 +48,63 @@ export class PaymentController {
         this.useController = new NPUserController(this.db, this.tableNames.USER);
         this.configure(config);
 
+    }
+
+    encodeTxnDataForUrl(txnDataJson: any): string {
+        // Accept either an object or a JSON string.
+        const payloadStr = typeof txnDataJson === 'string' ? txnDataJson : JSON.stringify(txnDataJson);
+
+        // Derive a 32-byte key from config.SECRET (fallback to config.KEY).
+        const secret = String(this.config.SECRET || this.config.KEY || '');
+        if (!secret) {
+            // No secret available — fallback to url-safe base64 (not secure).
+            return Buffer.from(payloadStr, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        const key = crypto.createHash('sha256').update(secret).digest(); // 32 bytes
+        const iv = crypto.randomBytes(12); // 12 bytes recommended for GCM
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+        const encrypted = Buffer.concat([cipher.update(payloadStr, 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+
+        // Store as: iv (12) | tag (16) | ciphertext — then URL-safe base64
+        const out = Buffer.concat([iv, tag, encrypted]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        return out;
+    }
+
+    decodeTxnDataFromUrl(encodedStr: string): any {
+        if (!encodedStr) return '';
+
+        // Convert back to standard base64 and pad
+        let b64 = encodedStr.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4;
+        if (pad) b64 += '='.repeat(4 - pad);
+
+        const raw = Buffer.from(b64, 'base64');
+
+        // If too short to contain iv+tag, treat as plain base64 payload
+        if (raw.length < 12 + 16 + 1) {
+            try { return raw.toString('utf8'); } catch (e) { return ''; }
+        }
+
+        try {
+            const iv = raw.slice(0, 12);
+            const tag = raw.slice(12, 28);
+            const ciphertext = raw.slice(28);
+
+            const secret = String(this.config.SECRET || this.config.KEY || '');
+            if (!secret) return raw.toString('utf8');
+
+            const key = crypto.createHash('sha256').update(secret).digest();
+            const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+            decipher.setAuthTag(tag);
+            const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+            return decrypted;
+        } catch (err) {
+            // Fallback: return plain base64-decoded string (best-effort)
+            try { return Buffer.from(b64, 'base64').toString('utf8'); }
+            catch (e) { console.log('decodeTxnDataFromUrl error', e); return ''; }
+        }
     }
 
     private configure(config: NPConfig) {
@@ -118,7 +174,7 @@ export class PaymentController {
         const razorPayInstance = this.razorPayInstance;
 
         if (!req.body.ORDER_ID && !req.body.EMAIL && req.query?.to) {
-            let toData = JSON.parse(nodeBase64.decode(req.query.to));
+            let toData = JSON.parse(this.decodeTxnDataFromUrl(req.query.to as string));
             req.body.NAME = toData.NAME
             req.body.EMAIL = toData.EMAIL
             req.body.TXN_AMOUNT = toData.TXN_AMOUNT
@@ -436,7 +492,8 @@ export class PaymentController {
                     pname: req.body.PRODUCT_NAME,
                     extra: '',
                     returnUrl: req.body.RETURN_URL || '',
-                    webhookUrl: req.body.WEBHOOK_URL || ''
+                    webhookUrl: req.body.WEBHOOK_URL || '',
+                    clientId: req.body.CLIENT_ID || ''
                 };
 
                 try {
@@ -623,6 +680,15 @@ export class PaymentController {
             callbacks.onFinish(req.body.ORDERID, objForUpdate);
         }
         objForUpdate.readonly = "readonly";
+        if (webhookUrl) {
+            try {
+                await axios.post(webhookUrl, objForUpdate);
+                console.log("Sent webhook to ", webhookUrl, 'orderId:', req.body.ORDERID, 'txnId:', req.body.TXNID);
+            }
+            catch (e) {
+                console.log("Error sending webhook to ", webhookUrl, (e === null || e === void 0 ? void 0 : e.message) || e, 'orderId:', req.body.ORDERID, 'txnId:', req.body.TXNID);
+            }
+        }
         if (returnUrl) {
             const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
             return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
@@ -852,13 +918,14 @@ export class PaymentController {
                 pname: req.body.PRODUCT_NAME,
                 returnUrl: req.body.RETURN_URL || '',
                 webhookUrl: req.body.WEBHOOK_URL || '',
-                extra: (req.body.EXTRA || '')
+                extra: (req.body.EXTRA || ''),
+                clientId: req.body.CLIENT_ID || ''
 
             };
 
 
             const txn = await this.insertTransactionInDb(txnTask as NPTransaction) as NPTransaction & { payurl?: string };
-            const urlData64 = nodeBase64.encode(JSON.stringify({
+            const urlData64 = this.encodeTxnDataForUrl(JSON.stringify({
                 NAME: txn.name,
                 EMAIL: txn.email,
                 MOBILE_NO: txn.phone,
@@ -866,7 +933,8 @@ export class PaymentController {
                 RETURN_URL: txn.returnUrl,
                 WEBHOOK_URL: txn.webhookUrl,
                 TXN_AMOUNT: txn.amount,
-                PRODUCT_NAME: txn.pname
+                PRODUCT_NAME: txn.pname,
+                clientId: txn.clientId
             }))
 
             txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;

@@ -176,9 +176,17 @@ Common:
 Gateway-specific:
 
 - Paytm: `paytm_url`, `MID`, `WEBSITE`, `CHANNEL_ID`, `INDUSTRY_TYPE_ID`
+  - Sandbox: https://securegw-stage.paytm.in
+  - Prod: https://securegw.paytm.in
 - Razorpay: `razor_url`, `KEY`, `SECRET`
+  - Sandbox: https://api.razorpay.com/
+  - Prod: https://api.razorpay.com/
 - PayU: `payu_url`, `KEY`, `SECRET`
+  - Sandbox: https://test.payu.in/_payment
+  - Prod: https://secure.payu.in/_payment
 - Open Money: `open_money_url`, `KEY`, `SECRET`
+  - Sandbox: https://sandbox-icp-api.bankopen.co/api
+  - Prod: https://icp-api.bankopen.co/api
 
 UI / behavior:
 
