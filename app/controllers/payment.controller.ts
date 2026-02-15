@@ -186,7 +186,9 @@ export class PaymentController {
 
         Utils.sanitizeRequest(req.body);
         let gotAllParams = true;
-        let checkedFields = ['TXN_AMOUNT', 'PRODUCT_NAME', 'MOBILE_NO', 'NAME', 'EMAIL']
+        let checkedFields = ['TXN_AMOUNT', 'PRODUCT_NAME',
+            //  'MOBILE_NO', 
+            'NAME', 'EMAIL']
         if (req.body !== undefined) {
 
             for (var i = 0; i < checkedFields.length; i++) {
@@ -800,7 +802,9 @@ export class PaymentController {
         const razorPayInstance = this.razorPayInstance;
 
         // mandayory field
-        const requiredFields = ['NAME', 'EMAIL', 'MOBILE_NO', 'TXN_AMOUNT', 'PRODUCT_NAME'];
+        const requiredFields = ['NAME', 'EMAIL',
+            // 'MOBILE_NO', 
+            'TXN_AMOUNT', 'PRODUCT_NAME'];
         const checkedFields: string[] = [];
         let gotAllParams = true;
         requiredFields.forEach(field => {
