@@ -1,4 +1,5 @@
-import { NPConfig } from "../models";
+import { Request } from "express";
+import { NPConfig, NPTransaction } from "../models";
 
 const defaults: Record<string, any> = {
     // Server configuration
@@ -147,6 +148,20 @@ function validateOpenMoneyConfig(config: Record<string, any>) {
             `OpenMoney configuration incomplete. Missing fields: ${missing.join(', ')}`
         );
     }
+}
+
+export function withClientConfigOverrides(config: NPConfig, req: Request, orderData?: NPTransaction): NPConfig {
+    let _client = config;
+    if (config.getClientConfig && (req || orderData?.clientId)) {
+        const clientId = orderData?.clientId || req.headers['x-client-id'] as string || req.query.client_id as string || req.body.client_id as string || req.body.CLIENT_ID as string || req.query.CLIENT_ID as string;
+        if (clientId) {
+            const clientConfig = config.getClientConfig(clientId);
+            if (clientConfig) {
+                _client = { ...config, ...clientConfig };
+            }
+        }
+    }
+    return _client;
 }
 
 

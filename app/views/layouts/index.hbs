@@ -24,17 +24,17 @@
     }
   </style>
 </head>
-<body class="theme-{{#if themeName}}{{themeName}}{{else}}dark{{/if}}">
+<body class="theme-{{#if theme.name}}{{theme.name}}{{else}}dark{{/if}}">
   <div class="shell">
     <header class="shell__header">
       <div class="brand">
-        {{#if logo}}
-          <span class="brand__mark brand__mark--img"><img src="{{logo}}" alt="{{brand}} logo"></span>
+        {{#if theme.logo}}
+          <span class="brand__mark brand__mark--img"><img src="{{theme.logo}}" alt="{{theme.brand}} logo"></span>
         {{else}}
-          <span class="brand__mark">{{brand}}</span>
+          <span class="brand__mark">{{theme.brand}}</span>
         {{/if}}
         <div class="brand__text">
-          <div class="brand__title">{{brand}}</div>
+          <div class="brand__title">{{theme.brand}}</div>
           <div class="brand__meta">Secure checkout</div>
         </div>
       </div>
@@ -46,7 +46,7 @@
     </main>
 
     <footer class="shell__footer">
-      <span>Protected by {{brand}}</span>
+      <span>Protected by {{theme.brand}}</span>
     </footer>
   </div>
 </body>

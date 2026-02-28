@@ -41,10 +41,15 @@
         <input type="email" name="EMAIL" required value="{{EMAIL}}" {{readonly}} />
       </label>
 
-      <label class="field">
-        <span class="field__label">Phone</span>
-        <input type="text" name="MOBILE_NO" required value="{{MOBILE_NO}}" {{readonly}} />
-      </label>
+
+       {{#if MOBILE_NO}}
+         <label class="field">
+          <span class="field__label">Phone</span>
+          <input type="text" name="MOBILE_NO" required value="{{MOBILE_NO}}" {{readonly}} />
+        </label>
+       {{/if}}
+
+    
 
       {{#if check}}
       <label class="field">
@@ -82,17 +87,17 @@
   </section>
 </div>
 
-{{!-- <script>
-  (function(){
-    if (window.__npPayBtnBound) return;
-    window.__npPayBtnBound = true;
-    const payBtn = document.getElementById('pay-button');
-    if (payBtn) {
-      payBtn.addEventListener('click', () => {
-        payBtn.setAttribute('data-loading', 'true');
-        payBtn.setAttribute('disabled', 'disabled');
-        setTimeout(() => payBtn.innerText = 'Processing…', 10);
-      });
-    }
-  })();
-</script> --}}
+ <script>
+  var enableConfirmationPage = {{#if enableConfirmationPage}}true{{else}}false{{/if}};
+  var readonly = {{#if readonly}}true{{else}}false{{/if}};
+  // if in readonly mode( all data recieved) and enableConfirmationPage is false, submit the form automatically
+  // show a spinner or something while redirecting to payment gateway to avoid user confusion
+  // instead of the form
+  if (readonly && !enableConfirmationPage) {
+    const form = document.getElementById('payment-form');
+    const payButton = document.getElementById('pay-button');
+    payButton.disabled = true;
+    payButton.innerText = 'Redirecting...';
+    form.submit();
+  }
+</script> 

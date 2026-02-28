@@ -4,9 +4,9 @@ import bodyParser from 'body-parser';
 import exphbs from 'express-handlebars';
 import mongoose from 'mongoose';
 import { PaymentController } from './app/controllers/payment.controller';
-import { NPCallbacks, NPConfig, NPTableNames } from './app/models';
+import { NPCallbacks, NPConfig, NPConfigTheme, NPTableNames } from './app/models';
 import { MultiDbORM } from 'multi-db-orm';
-import { buildConfig } from './app/utils/buildConfig';
+import { buildConfig, withClientConfigOverrides } from './app/utils/buildConfig';
 
 export * from './app/models';
 
@@ -74,19 +74,20 @@ export function createPaymentMiddleware(
     const pc = new PaymentController(config, db, callbacks, tableNames);
 
     subApp.use((req: Request, res: Response, next: NextFunction) => {
-        const theme = config.theme || {};
+        let _client = withClientConfigOverrides(config, req);
+        const theme = _client.theme || {} as NPConfigTheme;
         res.locals.theme = {
-            primary: theme.primary || '#2f8bff',
+            primary: theme.primary || '#086cfe',
             accent: theme.accent || '#5ce1e6',
             surface: theme.surface || '#0f1021',
             text: theme.text || '#e9ecf2',
             success: theme.success || '#24cf5f',
             danger: theme.danger || '#ff6b6b',
         };
-        res.locals.themeName = config.themeName || theme.name || 'dark';
-        res.locals.brand = config.brand || 'Secure Pay';
-        res.locals.logo = config.logo || '';
-        res.locals.path_prefix = config.path_prefix;
+        res.locals.themeName = theme.name || 'dark';
+        res.locals.brand = theme.brand || 'Secure Pay';
+        res.locals.logo = theme.logo || '';
+        res.locals.path_prefix = _client.path_prefix;
         next();
     });
 

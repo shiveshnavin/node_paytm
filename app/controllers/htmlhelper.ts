@@ -67,7 +67,7 @@ export function renderRazorpayCheckout(req: Request, res: Response, params: Reco
         currency: 'INR',
         name: params['PRODUCT_NAME'],
         description: `Order # ${params['ORDER_ID']}`,
-        image: config.logo,
+        image: config.theme?.logo || '',
         order_id: params['ORDER_ID'],
         callback_url: params['CALLBACK_URL'],
         prefill: {
@@ -76,7 +76,7 @@ export function renderRazorpayCheckout(req: Request, res: Response, params: Reco
             contact: params['MOBILE_NO']
         },
         theme: {
-            color: config.theme_color
+            color: config.theme?.accent || '#086cfe'
         }
     };
 

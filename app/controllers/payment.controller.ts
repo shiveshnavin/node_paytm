@@ -14,6 +14,7 @@ import { Utils } from '../utils/utils';
 import { LoadingSVG } from './static/loadingsvg';
 import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction } from '../models';
 import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
+import { withClientConfigOverrides } from '../utils/buildConfig';
 
 const IDLEN = 14;
 
@@ -28,7 +29,8 @@ function makeid(length: number): string {
 
 
 export class PaymentController {
-    private config: NPConfig;
+    // private config: NPConfig;
+    private baseConfig: NPConfig;
     private callbacks: any;
     private db: MultiDbORM;
     private tableNames: NPTableNames = { USER: 'npusers', TRANSACTION: 'nptransactions' };
@@ -38,24 +40,25 @@ export class PaymentController {
     private openMoneyInstance: OpenMoney
     private razorPayInstance: typeof RazorPay
 
-    constructor(config: NPConfig, db: MultiDbORM, callbacks?: any, tableNames?: NPTableNames) {
-        this.config = config;
+    constructor(baseConfig: NPConfig, db: MultiDbORM, callbacks?: any, tableNames?: NPTableNames) {
+        this.baseConfig = baseConfig;
         this.callbacks = callbacks;
         this.db = db;
         if (tableNames) {
             this.tableNames = tableNames;
         }
         this.useController = new NPUserController(this.db, this.tableNames.USER);
-        this.configure(config);
+        this.configure(baseConfig);
 
     }
 
-    encodeTxnDataForUrl(txnDataJson: any): string {
+    encodeTxnDataForUrl(txnDataJson: any, req: Request): string {
+        const config = withClientConfigOverrides(this.baseConfig, req);
         // Accept either an object or a JSON string.
         const payloadStr = typeof txnDataJson === 'string' ? txnDataJson : JSON.stringify(txnDataJson);
 
         // Derive a 32-byte key from config.SECRET (fallback to config.KEY).
-        const secret = String(this.config.SECRET || this.config.KEY || '');
+        const secret = String(config.SECRET || config.KEY || '');
         if (!secret) {
             // No secret available — fallback to url-safe base64 (not secure).
             return Buffer.from(payloadStr, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -72,7 +75,7 @@ export class PaymentController {
         return out;
     }
 
-    decodeTxnDataFromUrl(encodedStr: string): any {
+    decodeTxnDataFromUrl(encodedStr: string, req?: Request): any {
         if (!encodedStr) return '';
 
         // Convert back to standard base64 and pad
@@ -92,7 +95,8 @@ export class PaymentController {
             const tag = raw.slice(12, 28);
             const ciphertext = raw.slice(28);
 
-            const secret = String(this.config.SECRET || this.config.KEY || '');
+            const config = withClientConfigOverrides(this.baseConfig, req)
+            const secret = String(config.SECRET || config.KEY || '');
             if (!secret) return raw.toString('utf8');
 
             const key = crypto.createHash('sha256').update(secret).digest();
@@ -148,9 +152,10 @@ export class PaymentController {
         return txnData;
     }
 
-    private async generateChecksum(params: Record<string, any>): Promise<string> {
+    private async generateChecksum(params: Record<string, any>, req?: Request): Promise<string> {
+        const config = withClientConfigOverrides(this.baseConfig, req)
         return await new Promise<string>((resolve, reject) => {
-            checksum_lib.genchecksum(params, this.config.KEY, (err: unknown, cs: string | undefined) => {
+            checksum_lib.genchecksum(params, config.KEY, (err: unknown, cs: string | undefined) => {
                 if (err || !cs) {
                     reject(err || new Error('Error generating checksum'));
                     return;
@@ -168,13 +173,12 @@ export class PaymentController {
 
     async init(req: Request, res: Response) {
 
-        const config = this.config;
         const callbacks = this.callbacks;
         const vp = this.viewPath;
         const razorPayInstance = this.razorPayInstance;
 
         if (!req.body.ORDER_ID && !req.body.EMAIL && req.query?.to) {
-            let toData = JSON.parse(this.decodeTxnDataFromUrl(req.query.to as string));
+            let toData = JSON.parse(this.decodeTxnDataFromUrl(req.query.to as string, req));
             req.body.NAME = toData.NAME
             req.body.EMAIL = toData.EMAIL
             req.body.TXN_AMOUNT = toData.TXN_AMOUNT
@@ -182,8 +186,10 @@ export class PaymentController {
             req.body.ORDER_ID = toData.ORDER_ID || toData.ORDERID
             req.body.PRODUCT_NAME = toData.PRODUCT_NAME
             req.body.RETURN_URL = toData.RETURN_URL
+            req.body.CLIENT_ID = toData.CLIENT_ID
         }
 
+        const config = withClientConfigOverrides(this.baseConfig, req);
         Utils.sanitizeRequest(req.body);
         let gotAllParams = true;
         let checkedFields = ['TXN_AMOUNT', 'PRODUCT_NAME',
@@ -228,7 +234,7 @@ export class PaymentController {
             params['PRODUCT_NAME'] = req.body.PRODUCT_NAME;
             params['NAME'] = req.body.NAME;
 
-            if (this.config.paytm_url) {
+            if (config.paytm_url) {
 
                 let initTxnbody: Record<string, any> = {
                     "requestType": "Payment",
@@ -247,12 +253,12 @@ export class PaymentController {
                         "email": params['EMAIL']
                     }
                 };
-                if (this.config.mode) {
-                    initTxnbody["enablePaymentMode"] = JSON.parse(this.config.mode)
+                if (config.mode) {
+                    initTxnbody["enablePaymentMode"] = JSON.parse(config.mode)
                 }
 
-                let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), this.config.KEY)
-                let initTxnUrl = this.config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
+                let checksum = await PaytmChecksum.generateSignature(JSON.stringify(initTxnbody), config.KEY)
+                let initTxnUrl = config.paytm_url + `/theia/api/v1/initiateTransaction?mid=${params['MID']}&orderId=${params['ORDER_ID']}`;
 
                 try {
                     const resp = await axios.post(initTxnUrl, {
@@ -276,7 +282,7 @@ export class PaymentController {
                         paytmJsToken.MID = params['MID'];
                         paytmJsToken.CALLBACK_URL = params['CALLBACK_URL'];
 
-                        return renderPaytmJsCheckout(req, res, paytmJsToken, this.config);
+                        return renderPaytmJsCheckout(req, res, paytmJsToken, config);
                     }
                     else {
                         console.log('ERROR:::', resp.status, '\n', body);
@@ -304,14 +310,14 @@ export class PaymentController {
                 }
 
             }
-            else if (this.config.razor_url) {
-                return renderRazorpayCheckout(req, res, params, this.config, LoadingSVG);
+            else if (config.razor_url) {
+                return renderRazorpayCheckout(req, res, params, config, LoadingSVG);
             }
-            else if (this.config.payu_url) {
+            else if (config.payu_url) {
                 const payuRequest = this.payuInstance.generatePaymentRequest(params);
                 this.payuInstance.renderProcessingPage(params, payuRequest, res, LoadingSVG);
             }
-            else if (this.config.open_money_url) {
+            else if (config.open_money_url) {
                 try {
                     let pmttoken = await this.openMoneyInstance.generatePaymentToken(params);
                     this.openMoneyInstance.renderProcessingPage(params, pmttoken, res, LoadingSVG);
@@ -361,6 +367,9 @@ export class PaymentController {
 
                 const showConfirmation = (checksum = '') => {
                     return renderView(req, res, vp + "init.hbs", {
+                        name: 'ASDASD',
+                        enableConfirmationPage: config.enableConfirmationPage,
+                        theme: config.theme,
                         path_prefix: config.path_prefix,
                         action: "/" + config.path_prefix + "/init",
                         readonly: 'readonly',
@@ -383,7 +392,7 @@ export class PaymentController {
 
 
                 if (config.paytm_url) {
-                    const checksum = await this.generateChecksum(params);
+                    const checksum = await this.generateChecksum(params, req);
                     showConfirmation(checksum);
                 }
                 else if (config.razor_url || config.payu_url || config.open_money_url) {
@@ -483,9 +492,11 @@ export class PaymentController {
 
 
             return renderView(req, res, this.viewPath + "init.hbs", {
-
-                path_prefix: this.config.path_prefix,
-                action: "/" + this.config.path_prefix + "/init",
+                name: 'ASDASD',
+                enableConfirmationPage: config.enableConfirmationPage,
+                theme: config.theme,
+                path_prefix: config.path_prefix,
+                action: "/" + config.path_prefix + "/init",
                 readonly: '',
                 check: true,
                 BUTTON: 'Submit',
@@ -510,7 +521,6 @@ export class PaymentController {
     }
 
     async updateTransaction(req: Request, res: Response): Promise<void> {
-        const config = this.config;
         const vp = this.viewPath;
         const callbacks = this.callbacks;
 
@@ -530,6 +540,7 @@ export class PaymentController {
         let webhookUrl = objForUpdate ? (objForUpdate.webhookUrl as string | null) : null;
         if (webhookUrl === 'undefined') webhookUrl = null;
         if (returnUrl === 'undefined') returnUrl = null;
+        const config = withClientConfigOverrides(this.baseConfig, req, objForUpdate);
 
         if (!objForUpdate) {
 
@@ -613,13 +624,26 @@ export class PaymentController {
             return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
         }
         renderView(req, res, vp + "result.hbs", {
+            theme: config.theme,
             path_prefix: config.path_prefix,
             ...objForUpdate
         });
     }
 
+    private async getOrder(req: Request = { body: {}, query: {} } as any, orderId?: string): Promise<NPTransaction | null> {
+
+        const orderToFind = orderId || req.body.ORDERID || req.body.ORDER_ID || req.body.ORDER_ID || req.body.ORDERId || req.query.ORDERID || req.query.ORDERId || req.query.ORDER_ID || req.query.order_id;
+        const myquery = { orderId: orderToFind };
+        let objForUpdate: NPTransaction | null = null;
+        try {
+            objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null) as NPTransaction | null;
+        } catch {
+            objForUpdate = objForUpdate || null;
+        }
+        return objForUpdate;
+    }
+
     async callback(req: Request, res: Response): Promise<void> {
-        const config = this.config;
         const payuInstance = this.payuInstance;
         const openMoneyInstance = this.openMoneyInstance;
 
@@ -642,12 +666,16 @@ export class PaymentController {
 
         let result = false;
         let isCancelled = false;
+
+
+        const objForUpdate = await this.getOrder(req);
+        const config = withClientConfigOverrides(this.baseConfig, req, objForUpdate);
         if (config.paytm_url) {
             const checksumhash = req.body.CHECKSUMHASH;
             if (checksumhash) {
                 result = await checksum_lib.verifychecksum(req.body, config.KEY, checksumhash);
             } else {
-                const liveStatus = await this.getStatusFromPaytm({ MID: config.MID, ORDERID: req.body.ORDERID }, req.body.ORDERID);
+                const liveStatus = await this.getStatusFromPaytm({ MID: config.MID, ORDERID: req.body.ORDERID }, req.body.ORDERID, req);
                 // Merge important fields when live status is available
                 if (liveStatus && typeof liveStatus === 'object') {
                     req.body.STATUS = liveStatus.STATUS || req.body.STATUS;
@@ -716,8 +744,26 @@ export class PaymentController {
         }
     }
 
+    getServiceUsed(req: Request, baseConfig: NPConfig): string {
+        const config = withClientConfigOverrides(baseConfig, req);
+        let serviceUsed = '';
+        if (config.paytm_url) serviceUsed = 'Paytm';
+        if (config.razor_url) serviceUsed = 'Razorpay';
+        if (config.payu_url) serviceUsed = 'PayU';
+        if (config.open_money_url) serviceUsed = 'OpenMoney';
+
+        // https://razorpay.com/docs/webhooks/?preferred-country=IN
+        if (req.headers["x-razorpay-signature"]) serviceUsed = 'Razorpay';
+        // https://business.paytm.com/docs/payment-status/
+        else if (req.body.PAYMENTMODE) serviceUsed = 'Paytm';
+        // https://docs.payu.in/docs/webhooks
+        else if (req.body.payment_source) serviceUsed = 'PayU';
+
+        return serviceUsed;
+    }
+
     async webhook(req: Request, res: Response): Promise<void> {
-        const config = this.config;
+        let config = withClientConfigOverrides(this.baseConfig, req);
         const payuInstance = this.payuInstance;
         const openMoneyInstance = this.openMoneyInstance;
 
@@ -725,12 +771,14 @@ export class PaymentController {
         console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
         console.log("request_headers ", req.originalUrl, JSON.stringify(req.headers));
 
-        if (config.paytm_url) {
+        let serviceUsed = this.getServiceUsed(req, config);
+
+        if (serviceUsed === 'Paytm') {
             await this.callback(req, res);
             return;
         }
 
-        if (config.razor_url) {
+        if (serviceUsed === 'Razorpay') {
             const events = ["payment.captured", "payment.pending", "payment.failed"];
             if (req.body.event && events.indexOf(req.body.event) > -1) {
                 if (req.body.payload &&
@@ -739,6 +787,8 @@ export class PaymentController {
 
                     const entity = req.body.payload.payment.entity;
                     const razorpay_order_id = entity.order_id;
+                    const order = await this.getOrder(undefined, razorpay_order_id);
+                    config = withClientConfigOverrides(this.baseConfig, req, order || undefined);
                     const razorpay_payment_id = entity.id;
                     const status = entity.status;
                     const event = req.body.event;
@@ -787,18 +837,18 @@ export class PaymentController {
             return;
         }
 
-        if (config.payu_url) {
+        if (serviceUsed === 'PayU') {
             payuInstance.processWebhook(req, res, this.updateTransaction);
             return;
         }
-        if (config.open_money_url) {
+        if (serviceUsed === 'OpenMoney') {
             openMoneyInstance.processWebhook(req, res, this.updateTransaction);
         }
     }
 
     async createTxn(req: Request, res: Response): Promise<void> {
 
-        const config = this.config;
+        const config = withClientConfigOverrides(this.baseConfig, req);
         const razorPayInstance = this.razorPayInstance;
 
         // mandayory field
@@ -871,8 +921,9 @@ export class PaymentController {
                 WEBHOOK_URL: txn.webhookUrl,
                 TXN_AMOUNT: txn.amount,
                 PRODUCT_NAME: txn.pname,
-                clientId: txn.clientId
-            }))
+                clientId: txn.clientId,
+                CLIENT_ID: txn.clientId,
+            }), req)
 
             txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
             res.send(txn)
@@ -953,7 +1004,7 @@ export class PaymentController {
 
 
     async status(req: Request, res: Response): Promise<void> {
-        const config = this.config;
+        const config = withClientConfigOverrides(this.baseConfig, req);
         const callbacks = this.callbacks;
         const payuInstance = this.payuInstance;
         const openMoneyInstance = this.openMoneyInstance;
@@ -1012,7 +1063,7 @@ export class PaymentController {
             }
 
             if (config.paytm_url) {
-                const paytmResponse = await this.getStatusFromPaytm(params, req.body.ORDER_ID);
+                const paytmResponse = await this.getStatusFromPaytm(params, req.body.ORDER_ID, req);
                 await onStatusUpdate(paytmResponse);
             }
             else if (config.razor_url) {
@@ -1094,11 +1145,12 @@ export class PaymentController {
 
     }
 
-    private async getStatusFromPaytm(params: Record<string, any>, orderId: string): Promise<any> {
-        const checksum = await this.generateChecksum(params);
+    private async getStatusFromPaytm(params: Record<string, any>, orderId: string, req?: Request): Promise<any> {
+        const checksum = await this.generateChecksum(params, req);
+        const config = withClientConfigOverrides(this.baseConfig, req)
 
         try {
-            const resp = await axios.post(`${this.config.paytm_url}/order/status`, { MID: this.config.MID, ORDERID: orderId, CHECKSUMHASH: checksum });
+            const resp = await axios.post(`${config.paytm_url}/order/status`, { MID: config.MID, ORDERID: orderId, CHECKSUMHASH: checksum });
             if (resp.status === 200) {
                 return resp.data;
             }
