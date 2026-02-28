@@ -178,7 +178,12 @@ export class PaymentController {
         const razorPayInstance = this.razorPayInstance;
 
         if (!req.body.ORDER_ID && !req.body.EMAIL && req.query?.to) {
-            let toData = JSON.parse(this.decodeTxnDataFromUrl(req.query.to as string, req));
+            let toData: any = {}
+            try {
+                toData = JSON.parse(this.decodeTxnDataFromUrl(req.query.to as string, req));
+            } catch {
+                console.log("Error parsing 'to' query param data");
+            }
             req.body.NAME = toData.NAME
             req.body.EMAIL = toData.EMAIL
             req.body.TXN_AMOUNT = toData.TXN_AMOUNT
