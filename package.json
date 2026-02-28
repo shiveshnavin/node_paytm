@@ -12,7 +12,7 @@
     "copy:public": "copyfiles -u 1 \"public/**/*\" dist/public",
     "build": "npm-run-all clean build:ts copy:views copy:public",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm version patch && npm run build"
   },
   "repository": {
     "type": "git",
