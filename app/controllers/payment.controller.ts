@@ -763,86 +763,93 @@ export class PaymentController {
     }
 
     async webhook(req: Request, res: Response): Promise<void> {
-        let config = withClientConfigOverrides(this.baseConfig, req);
-        const payuInstance = this.payuInstance;
-        const openMoneyInstance = this.openMoneyInstance;
+        try {
+            let config = withClientConfigOverrides(this.baseConfig, req);
+            const payuInstance = this.payuInstance;
+            const openMoneyInstance = this.openMoneyInstance;
 
-        console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
-        console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
-        console.log("request_headers ", req.originalUrl, JSON.stringify(req.headers));
+            console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
+            console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
+            console.log("request_headers ", req.originalUrl, JSON.stringify(req.headers));
 
-        let serviceUsed = this.getServiceUsed(req, config);
+            let serviceUsed = this.getServiceUsed(req, config);
 
-        if (serviceUsed === 'Paytm') {
-            await this.callback(req, res);
-            return;
-        }
+            if (serviceUsed === 'Paytm') {
+                await this.callback(req, res);
+                return;
+            }
 
-        if (serviceUsed === 'Razorpay') {
-            const events = ["payment.captured", "payment.pending", "payment.failed"];
-            if (req.body.event && events.indexOf(req.body.event) > -1) {
-                if (req.body.payload &&
-                    req.body.payload.payment &&
-                    req.body.payload.payment.entity) {
+            if (serviceUsed === 'Razorpay') {
+                const events = ["payment.captured", "payment.pending", "payment.failed"];
+                if (req.body.event && events.indexOf(req.body.event) > -1) {
+                    if (req.body.payload &&
+                        req.body.payload.payment &&
+                        req.body.payload.payment.entity) {
 
-                    const entity = req.body.payload.payment.entity;
-                    const razorpay_order_id = entity.order_id;
-                    const order = await this.getOrder(undefined, razorpay_order_id);
-                    config = withClientConfigOverrides(this.baseConfig, req, order || undefined);
-                    const razorpay_payment_id = entity.id;
-                    const status = entity.status;
-                    const event = req.body.event;
-                    console.log(`Razorpay webhook payment order=${razorpay_order_id} payid=${razorpay_payment_id} status=${status}`)
+                        const entity = req.body.payload.payment.entity;
+                        const razorpay_order_id = entity.order_id;
+                        const order = await this.getOrder(undefined, razorpay_order_id);
+                        config = withClientConfigOverrides(this.baseConfig, req, order || undefined);
+                        const razorpay_payment_id = entity.id;
+                        const status = entity.status;
+                        const event = req.body.event;
+                        console.log(`Razorpay webhook payment order=${razorpay_order_id} payid=${razorpay_payment_id} status=${status}`)
 
-                    const reqBody = (req as any).rawBody;
-                    const signature = req.headers["x-razorpay-signature"];
-                    console.log("Razorpay webhook signature:", signature);
-                    if (signature === undefined) {
-                        res.status(400).send({ message: "Missing Razorpay signature" });
-                        return;
-                    }
-                    let signatureValid
-                    try {
-                        signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
-                    } catch (e) {
-                        signatureValid = false
-                    }
-                    if (signatureValid) {
-                        if (event === events[0]) {
-                            req.body.STATUS = "TXN_SUCCESS";
+                        const reqBody = (req as any).rawBody;
+                        const signature = req.headers["x-razorpay-signature"];
+                        console.log("Razorpay webhook signature:", signature);
+                        if (signature === undefined) {
+                            res.status(200).send({ message: "Missing Razorpay signature" });
+                            return;
                         }
-                        else if (event === events[1]) { //pending
-                            req.body.STATUS = "TXN_PENDING";
+                        let signatureValid
+                        try {
+                            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
+                        } catch (e) {
+                            signatureValid = false
                         }
-                        else { // failed
-                            req.body.STATUS = "TXN_FAILURE";
+                        if (signatureValid) {
+                            if (event === events[0]) {
+                                req.body.STATUS = "TXN_SUCCESS";
+                            }
+                            else if (event === events[1]) { //pending
+                                req.body.STATUS = "TXN_PENDING";
+                            }
+                            else { // failed
+                                req.body.STATUS = "TXN_FAILURE";
+                            }
+                            req.body.ORDERID = razorpay_order_id;
+                            req.body.TXNID = razorpay_payment_id;
+                            setTimeout(() => {
+                                this.updateTransaction(req, res);
+                            }, 3000);
                         }
-                        req.body.ORDERID = razorpay_order_id;
-                        req.body.TXNID = razorpay_payment_id;
-                        setTimeout(() => {
-                            this.updateTransaction(req, res);
-                        }, 3000);
+                        else {
+                            res.status(200).send({ message: "Invalid Rzpay signature" });
+                        }
                     }
                     else {
-                        res.status(401).send({ message: "Invalid Rzpay signature" });
+                        res.status(200).send({ message: "Invalid Payload" });
                     }
                 }
                 else {
-                    res.status(400).send({ message: "Invalid Payload" });
+                    res.status(200).send({ message: "Unsupported event : " + req.body.event });
                 }
+                return;
             }
-            else {
-                res.status(400).send({ message: "Unsupported event : " + req.body.event });
-            }
-            return;
-        }
 
-        if (serviceUsed === 'PayU') {
-            payuInstance.processWebhook(req, res, this.updateTransaction);
-            return;
-        }
-        if (serviceUsed === 'OpenMoney') {
-            openMoneyInstance.processWebhook(req, res, this.updateTransaction);
+            if (serviceUsed === 'PayU') {
+                payuInstance.processWebhook(req, res, this.updateTransaction);
+                return;
+            }
+            if (serviceUsed === 'OpenMoney') {
+                openMoneyInstance.processWebhook(req, res, this.updateTransaction);
+            }
+        } catch (e) {
+            console.error("Error in webhook processing", e);
+            try {
+                res.status(200).send({ message: "Received" });
+            } catch (e) { }
         }
     }
 

@@ -202,11 +202,11 @@ export default class OpenMoney {
           });
         }, 3000);
       } else {
-        res.status(401);
+        res.status(200);
         res.send({ message: 'Missing payment_token' });
       }
     } else {
-      res.status(201);
+      res.status(200);
       res.send({ message: 'Webhook not supported' });
     }
   }
