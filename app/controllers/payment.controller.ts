@@ -109,12 +109,12 @@ export class PaymentController {
     }
 
     getProviderInstance(providerName: string, config: NPConfig): PayU | OpenMoney | typeof RazorPay | null {
-        switch (providerName) {
-            case 'PayU':
+        switch (providerName.toLocaleLowerCase()) {
+            case 'PayU'.toLocaleLowerCase():
                 return new PayU(config)
-            case 'OpenMoney':
+            case 'OpenMoney'.toLocaleLowerCase():
                 return new OpenMoney(config)
-            case 'RazorPay':
+            case 'RazorPay'.toLocaleLowerCase():
                 return new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
             default:
                 return null;
