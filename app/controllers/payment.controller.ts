@@ -36,9 +36,6 @@ export class PaymentController {
     private tableNames: NPTableNames = { USER: 'npusers', TRANSACTION: 'nptransactions' };
     private useController: NPUserController;
     private viewPath = ''
-    private payuInstance: PayU
-    private openMoneyInstance: OpenMoney
-    private razorPayInstance: typeof RazorPay
 
     constructor(baseConfig: NPConfig, db: MultiDbORM, callbacks?: any, tableNames?: NPTableNames) {
         this.baseConfig = baseConfig;
@@ -111,22 +108,24 @@ export class PaymentController {
         }
     }
 
+    getProviderInstance(providerName: string, config: NPConfig): PayU | OpenMoney | typeof RazorPay | null {
+        switch (providerName) {
+            case 'PayU':
+                return new PayU(config)
+            case 'OpenMoney':
+                return new OpenMoney(config)
+            case 'RazorPay':
+                return new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
+            default:
+                return null;
+        }
+    }
+
     private configure(config: NPConfig) {
         const viewRoot = config.templateDir
             ? config.templateDir
             : path.join(__dirname, '..', 'views');
         this.viewPath = viewRoot.endsWith(path.sep) ? viewRoot : viewRoot + path.sep
-
-        if (config.payu_url)
-            this.payuInstance = new PayU(config);
-
-        if (config.open_money_url)
-            this.openMoneyInstance = new OpenMoney(config);
-
-        if (config.razor_url) {
-            this.razorPayInstance = new RazorPay({ key_id: config.KEY, key_secret: config.SECRET })
-        }
-
 
         const sample = {
             orderId: "string",
@@ -175,7 +174,6 @@ export class PaymentController {
 
         const callbacks = this.callbacks;
         const vp = this.viewPath;
-        const razorPayInstance = this.razorPayInstance;
 
         if (!req.body.ORDER_ID && !req.body.EMAIL && req.query?.to) {
             let toData: any = {}
@@ -319,13 +317,15 @@ export class PaymentController {
                 return renderRazorpayCheckout(req, res, params, config, LoadingSVG);
             }
             else if (config.payu_url) {
-                const payuRequest = this.payuInstance.generatePaymentRequest(params);
-                this.payuInstance.renderProcessingPage(params, payuRequest, res, LoadingSVG);
+                const payuInstance = this.getProviderInstance('PayU', config);
+                const payuRequest = payuInstance.generatePaymentRequest(params);
+                payuInstance.renderProcessingPage(params, payuRequest, res, LoadingSVG);
             }
             else if (config.open_money_url) {
+                const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
                 try {
-                    let pmttoken = await this.openMoneyInstance.generatePaymentToken(params);
-                    this.openMoneyInstance.renderProcessingPage(params, pmttoken, res, LoadingSVG);
+                    let pmttoken = await openMoneyInstance.generatePaymentToken(params);
+                    openMoneyInstance.renderProcessingPage(params, pmttoken, res, LoadingSVG);
 
                     var myquery = { orderId: params['ORDER_ID'] };
                     const objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery);
@@ -337,7 +337,7 @@ export class PaymentController {
                     }
 
                 } catch (e) {
-                    this.openMoneyInstance.renderError(params, e, res)
+                    openMoneyInstance.renderError(params, e, res)
                 }
             }
             if (this.callbacks && typeof this.callbacks.onStart === 'function') {
@@ -391,7 +391,8 @@ export class PaymentController {
                         INDUSTRY_TYPE_ID: params['INDUSTRY_TYPE_ID'],
                         CHANNEL_ID: params['CHANNEL_ID'],
                         CALLBACK_URL: params['CALLBACK_URL'],
-                        CHECKSUMHASH: checksum
+                        CHECKSUMHASH: checksum,
+                        CLIENT_ID: params['CLIENT_ID'] || txnData.clientId || (config as any).client_id || ''
                     });
                 }
 
@@ -472,6 +473,7 @@ export class PaymentController {
                         receipt: user.id + '_' + Date.now()
                     };
                     try {
+                        const razorPayInstance = this.getProviderInstance('RazorPay', config);
                         const order = await razorPayInstance.orders.create(options);
                         orderId = order.id
                         await onOrder(orderId)
@@ -517,7 +519,8 @@ export class PaymentController {
                 INDUSTRY_TYPE_ID: config.INDUSTRY_TYPE_ID,
                 CHANNEL_ID: config.CHANNEL_ID,
                 CALLBACK_URL: config.CALLBACK_URL,
-                CHECKSUMHASH: ''
+                CHECKSUMHASH: '',
+                CLIENT_ID: (config as any).client_id || req.body.CLIENT_ID || ''
 
             });
 
@@ -649,8 +652,8 @@ export class PaymentController {
     }
 
     async callback(req: Request, res: Response): Promise<void> {
-        const payuInstance = this.payuInstance;
-        const openMoneyInstance = this.openMoneyInstance;
+        const payuInstance = this.getProviderInstance('PayU', withClientConfigOverrides(this.baseConfig, req));
+        const openMoneyInstance = this.getProviderInstance('OpenMoney', withClientConfigOverrides(this.baseConfig, req));
 
         console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
 
@@ -696,7 +699,7 @@ export class PaymentController {
             let orderid = req.body.razorpay_order_id || req.query.ORDERID || req.query.order_id;
             let liveResonse = null as any
             if (orderid) {
-                liveResonse = await this.razorPayInstance.orders.fetch(orderid).catch(() => null);
+                liveResonse = await this.getProviderInstance('Razorpay', config).orders.fetch(orderid).catch(() => null);
                 req.body.extras = liveResonse
             }
             if (req.body.razorpay_payment_id) {
@@ -770,8 +773,8 @@ export class PaymentController {
     async webhook(req: Request, res: Response): Promise<void> {
         try {
             let config = withClientConfigOverrides(this.baseConfig, req);
-            const payuInstance = this.payuInstance;
-            const openMoneyInstance = this.openMoneyInstance;
+            const payuInstance = this.getProviderInstance('PayU', config);
+            const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
 
             console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
             console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
@@ -861,7 +864,6 @@ export class PaymentController {
     async createTxn(req: Request, res: Response): Promise<void> {
 
         const config = withClientConfigOverrides(this.baseConfig, req);
-        const razorPayInstance = this.razorPayInstance;
 
         // mandayory field
         const requiredFields = ['NAME', 'EMAIL',
@@ -894,6 +896,7 @@ export class PaymentController {
                     currency: "INR",
                     receipt: user.id + '_' + Date.now()
                 };
+                const razorPayInstance = this.getProviderInstance('Razorpay', config);
                 const order = await razorPayInstance.orders.create(options);
                 id = order.id;
             }
@@ -1021,9 +1024,9 @@ export class PaymentController {
     async status(req: Request, res: Response): Promise<void> {
         const config = withClientConfigOverrides(this.baseConfig, req);
         const callbacks = this.callbacks;
-        const payuInstance = this.payuInstance;
-        const openMoneyInstance = this.openMoneyInstance;
-        const razorPayInstance = this.razorPayInstance;
+        const payuInstance = this.getProviderInstance('PayU', config);
+        const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
+        const razorPayInstance = this.getProviderInstance('Razorpay', config);
 
         if (!req.body.ORDERID && req.query.ORDERID) {
             req.body.ORDERID = req.query.ORDERID
