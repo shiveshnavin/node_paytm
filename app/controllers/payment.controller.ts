@@ -938,6 +938,9 @@ export class PaymentController {
             }), req)
 
             txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
+            if (txn.clientId) {
+                txn.payurl += `&client_id=${txn.clientId}`;
+            }
             res.send(txn)
         } catch (err) {
 
