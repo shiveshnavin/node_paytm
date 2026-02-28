@@ -528,7 +528,7 @@ export class PaymentController {
 
     }
 
-    async updateTransaction(req: Request, res: Response): Promise<void> {
+    async updateTransaction(req: Request, res: Response, fromWebhook: boolean = false): Promise<void> {
         const vp = this.viewPath;
         const callbacks = this.callbacks;
 
@@ -586,15 +586,21 @@ export class PaymentController {
                 }
             }
 
-            if (returnUrl) {
-                const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+            if (!fromWebhook) {
+                if (returnUrl) {
+                    const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                    return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+                }
+
+                renderView(req, res, vp + "result.hbs", {
+                    path_prefix: config.path_prefix,
+                    ...objForUpdate
+                });
+            }
+            else {
+                res.send({ message: "Webhook already processed !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID, status: objForUpdate.status });
             }
 
-            renderView(req, res, vp + "result.hbs", {
-                path_prefix: config.path_prefix,
-                ...objForUpdate
-            });
             return;
         }
 
@@ -627,15 +633,21 @@ export class PaymentController {
                 console.log("Error sending webhook to ", webhookUrl, (e === null || e === void 0 ? void 0 : e.message) || e, 'orderId:', req.body.ORDERID, 'txnId:', req.body.TXNID);
             }
         }
-        if (returnUrl) {
-            const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-            return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+        if (!fromWebhook) {
+
+            if (returnUrl) {
+                const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
+                return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+            }
+            renderView(req, res, vp + "result.hbs", {
+                theme: config.theme,
+                path_prefix: config.path_prefix,
+                ...objForUpdate
+            });
+
+        } else {
+            res.send({ message: "Transaction Updated !", ORDERID: req.body.ORDERID, TXNID: req.body.TXNID, status: objForUpdate.status });
         }
-        renderView(req, res, vp + "result.hbs", {
-            theme: config.theme,
-            path_prefix: config.path_prefix,
-            ...objForUpdate
-        });
     }
 
     private async getOrder(req: Request = { body: {}, query: {} } as any, orderId?: string): Promise<NPTransaction | null> {
@@ -829,7 +841,7 @@ export class PaymentController {
                             req.body.ORDERID = razorpay_order_id;
                             req.body.TXNID = razorpay_payment_id;
                             setTimeout(() => {
-                                this.updateTransaction(req, res);
+                                this.updateTransaction(req, res, true);
                             }, 3000);
                         }
                         else {
