@@ -190,6 +190,7 @@ export class PaymentController {
             req.body.PRODUCT_NAME = toData.PRODUCT_NAME
             req.body.RETURN_URL = toData.RETURN_URL
             req.body.CLIENT_ID = toData.CLIENT_ID
+            req.body.STATE = toData.STATE
         }
 
         const config = withClientConfigOverrides(this.baseConfig, req);
@@ -391,6 +392,7 @@ export class PaymentController {
                         INDUSTRY_TYPE_ID: params['INDUSTRY_TYPE_ID'],
                         CHANNEL_ID: params['CHANNEL_ID'],
                         CALLBACK_URL: params['CALLBACK_URL'],
+                        STATE: params['STATE'],
                         CHECKSUMHASH: checksum,
                         CLIENT_ID: params['CLIENT_ID'] || txnData.clientId || (config as any).client_id || ''
                     });
@@ -427,6 +429,7 @@ export class PaymentController {
                     extra: '',
                     returnUrl: req.body.RETURN_URL || '',
                     webhookUrl: req.body.WEBHOOK_URL || '',
+                    state: req.body.STATE || '',
                     clientId: req.body.CLIENT_ID || ''
                 };
 
@@ -520,6 +523,7 @@ export class PaymentController {
                 CHANNEL_ID: config.CHANNEL_ID,
                 CALLBACK_URL: config.CALLBACK_URL,
                 CHECKSUMHASH: '',
+                STATE: (req.body.STATE === undefined ? '' : req.body.STATE),
                 CLIENT_ID: (config as any).client_id || req.body.CLIENT_ID || ''
 
             });
@@ -933,6 +937,7 @@ export class PaymentController {
                 returnUrl: req.body.RETURN_URL || '',
                 webhookUrl: req.body.WEBHOOK_URL || '',
                 extra: (req.body.EXTRA || ''),
+                state: req.body.STATE || '',
                 clientId: req.body.CLIENT_ID || ''
 
             };
@@ -950,6 +955,7 @@ export class PaymentController {
                 PRODUCT_NAME: txn.pname,
                 clientId: txn.clientId,
                 CLIENT_ID: txn.clientId,
+                STATE: txn.state,
             }), req)
 
             txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
@@ -996,6 +1002,8 @@ export class PaymentController {
             status: 'status',
             mobile_no: 'phone',
             CLIENT_ID: 'clientId',
+            state: 'state',
+            STATE: 'state',
             clientId: 'clientId',
             WEBHOOK_URL: 'webhookUrl',
             webhookUrl: 'webhookUrl',
