@@ -135,9 +135,9 @@ class PayU {
         return JSON.parse(txnDataJson);
     }
 
-    async verifyResult(req: PayURequestLike): Promise<Dict> {
+    async verifyResult(req: PayURequestLike, _orderId?: string): Promise<Dict> {
         const originalBody = req.body || {};
-        const lookupId = originalBody.txnid || req.query?.order_id;
+        const lookupId = originalBody?.txnid || req.query?.order_id || _orderId;
         const statusResp = await this.checkBqrTxnStatus(lookupId);
 
         let resData: Dict | null = null;
@@ -267,6 +267,11 @@ class PayU {
             return;
         }
         let originalOrder = await getOrder(req, orderId);
+        if (!originalOrder) {
+            console.log('PayU Webhook: Original order not found for orderId', orderId);
+            res.status(200).send({ error: 'Original order not found' });
+            return;
+        }
         let updatedConfig = withClientConfigOverrides(this.baseConfig, req, originalOrder);
         this.initParams(updatedConfig)
         const payuRest = await this.verifyResult(req);

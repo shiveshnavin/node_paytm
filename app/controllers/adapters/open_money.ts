@@ -151,7 +151,7 @@ export default class OpenMoney {
     });
   }
 
-  processWebhook(req: AnyObject, res: AnyObject, updateTransaction: Function) {
+  processWebhook(req: AnyObject, res: AnyObject, updateTransaction: Function, getOrder: Function) {
     const config = this.config;
     const events = ['payment_captured', 'payment_pending', 'payment_failed', 'payment_cancelled'];
     if (req.body.event && events.indexOf(req.body.event) > -1) {

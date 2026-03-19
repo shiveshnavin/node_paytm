@@ -792,8 +792,8 @@ export class PaymentController {
     async webhook(req: Request, res: Response): Promise<void> {
         try {
             let config = withClientConfigOverrides(this.baseConfig, req);
-            const payuInstance = this.getProviderInstance('PayU', config);
-            const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
+            const payuInstance = this.getProviderInstance('PayU', config) as PayU;
+            const openMoneyInstance = this.getProviderInstance('OpenMoney', config) as OpenMoney;
 
             console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
             console.log("request_data rawBody", req.originalUrl, (req as any).rawBody)
@@ -864,13 +864,11 @@ export class PaymentController {
                 }
                 return;
             }
-
-            if (serviceUsed === 'PayU') {
-                payuInstance.processWebhook(req, res, this.updateTransaction, this.getOrder);
-                return;
+            else if (serviceUsed === 'PayU') {
+                await payuInstance.processWebhook(req, res, this.updateTransaction.bind(this), this.getOrder.bind(this));
             }
-            if (serviceUsed === 'OpenMoney') {
-                openMoneyInstance.processWebhook(req, res, this.updateTransaction, this.getOrder);
+            else if (serviceUsed === 'OpenMoney') {
+                await openMoneyInstance.processWebhook(req, res, this.updateTransaction.bind(this), this.getOrder.bind(this));
             }
         } catch (e) {
             console.error("Error in webhook processing", e);
