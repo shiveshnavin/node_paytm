@@ -777,11 +777,14 @@ export class PaymentController {
         if (config.open_money_url) serviceUsed = 'OpenMoney';
 
         // https://razorpay.com/docs/webhooks/?preferred-country=IN
-        if (req.headers["x-razorpay-signature"]) serviceUsed = 'Razorpay';
+        if (req.headers["x-razorpay-signature"])
+            serviceUsed = 'Razorpay';
         // https://business.paytm.com/docs/payment-status/
-        else if (req.body.PAYMENTMODE) serviceUsed = 'Paytm';
+        else if (req.body.PAYMENTMODE)
+            serviceUsed = 'Paytm';
         // https://docs.payu.in/docs/webhooks
-        else if (req.body.payment_source) serviceUsed = 'PayU';
+        else if (req.body.payment_source || req.body.merchantTransactionId)
+            serviceUsed = 'PayU';
 
         return serviceUsed;
     }
