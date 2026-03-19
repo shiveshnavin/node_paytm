@@ -25,9 +25,9 @@ const config = {
   host_url: "http://127.0.0.1:5544",
   path_prefix: "pay",
   homepage: "/",
-
   // enable one gateway
   payu_url: "https://test.payu.in/_payment",
+  // payu_url: "https://secure.payu.in/_payment",
   // paytm_url: 'https://securegw-stage.paytm.in',
   // razor_url: 'https://api.razorpay.com/',
   // open_money_url: 'https://sandbox-icp-api.bankopen.co/api',
