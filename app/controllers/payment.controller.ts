@@ -668,8 +668,6 @@ export class PaymentController {
     }
 
     async callback(req: Request, res: Response): Promise<void> {
-        const payuInstance = this.getProviderInstance('PayU', withClientConfigOverrides(this.baseConfig, req));
-        const openMoneyInstance = this.getProviderInstance('OpenMoney', withClientConfigOverrides(this.baseConfig, req));
 
         console.log("request_data ", req.originalUrl, JSON.stringify(req.body))
 
@@ -694,6 +692,8 @@ export class PaymentController {
 
         const objForUpdate = await this.getOrder(req);
         const config = withClientConfigOverrides(this.baseConfig, req, objForUpdate);
+        const payuInstance = this.getProviderInstance('PayU', withClientConfigOverrides(config, req, objForUpdate));
+        const openMoneyInstance = this.getProviderInstance('OpenMoney', withClientConfigOverrides(config, req, objForUpdate));
         if (config.paytm_url) {
             const checksumhash = req.body.CHECKSUMHASH;
             if (checksumhash) {
@@ -863,11 +863,11 @@ export class PaymentController {
             }
 
             if (serviceUsed === 'PayU') {
-                payuInstance.processWebhook(req, res, this.updateTransaction);
+                payuInstance.processWebhook(req, res, this.updateTransaction, this.getOrder);
                 return;
             }
             if (serviceUsed === 'OpenMoney') {
-                openMoneyInstance.processWebhook(req, res, this.updateTransaction);
+                openMoneyInstance.processWebhook(req, res, this.updateTransaction, this.getOrder);
             }
         } catch (e) {
             console.error("Error in webhook processing", e);
@@ -1042,11 +1042,6 @@ export class PaymentController {
 
 
     async status(req: Request, res: Response): Promise<void> {
-        const config = withClientConfigOverrides(this.baseConfig, req);
-        const callbacks = this.callbacks;
-        const payuInstance = this.getProviderInstance('PayU', config);
-        const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
-        const razorPayInstance = this.getProviderInstance('Razorpay', config);
 
         if (!req.body.ORDERID && req.query.ORDERID) {
             req.body.ORDERID = req.query.ORDERID
@@ -1066,6 +1061,14 @@ export class PaymentController {
             res.send(err)
             return null;
         }) as NPTransaction | null;
+
+        const config = withClientConfigOverrides(this.baseConfig, req, orderData);
+        const callbacks = this.callbacks;
+        const payuInstance = this.getProviderInstance('PayU', config);
+        const openMoneyInstance = this.getProviderInstance('OpenMoney', config);
+        const razorPayInstance = this.getProviderInstance('Razorpay', config);
+
+
         if (!orderData) {
             if (!res.headersSent) {
                 res.send({ message: "Order Not Found or not initiated yet!", ORDER_ID: req.body.ORDER_ID })

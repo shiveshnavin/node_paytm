@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import axios from 'axios';
+import { withClientConfigOverrides } from '../../utils/buildConfig';
+import { NPConfig, NPTransaction } from '../../models';
 
 type Dict = Record<string, any>;
 
@@ -11,25 +13,31 @@ interface PayUConfig {
     verifyUrl: string;
 }
 
-interface PayURequestLike {
+type PayURequestLike = {
     body?: Dict;
     query?: Dict;
     rawBody?: any;
     headers?: Dict;
-}
+} & any
 
-interface PayUResponseLike {
+type PayUResponseLike = {
     writeHead: (status: number, headers: Dict) => void;
     write: (chunk: string) => void;
     end: () => void;
-    status: (code: number) => void;
+    status: (code: number) => PayUResponseLike;
     send: (body: any) => void;
 }
 
 class PayU {
     config: PayUConfig;
+    baseConfig: NPConfig;
 
-    constructor(npconfig: Dict) {
+    constructor(npconfig: NPConfig) {
+        this.initParams(npconfig);
+    }
+
+    initParams(npconfig: NPConfig & Dict) {
+        this.baseConfig = npconfig;
         const baseUrl = (npconfig.payu_url || '').replace(/\/$/, '');
         const isSandbox = baseUrl.indexOf('test.payu.in') > -1;
         const verifyUrl = npconfig.payu_verify_url || (isSandbox
@@ -240,9 +248,36 @@ class PayU {
         res.end();
     }
 
-    processWebhook(req: PayURequestLike, res: PayUResponseLike, updateTransaction: Function): void {
-        res.status(201);
-        res.send({ message: 'Webhook not implemented for PayU' });
+    /**
+     * 
+     * @param req.body {"amount":"10.00","paymentMode":"UPICC","udf5":"","udf3":"","split_info":"","udf4":"","udf1":"user_SGnPOmzPxi","udf2":"payu_b2ThO9ra4e","customerName":"test","productInfo":"TEST","customerPhone":"","additionalCharges":"","paymentId":"27778865835","customerEmail":"test@gmail.com","merchantTransactionId":"payu_b2ThO9ra4e","error_Message":"No Error","notificationId":"12345","bankRefNum":"161058882264","hash":"12345","key":"2ETh7I","status":"Success","field4":""}
+     * @param res 
+     * @param updateTransaction 
+     */
+    async processWebhook(
+        req: PayURequestLike,
+        res: PayUResponseLike,
+        updateTransaction: Function,
+        getOrder: (req: Request, orderId?: string) => Promise<NPTransaction | null>): Promise<void> {
+        let body = req.body?.event_payload || req.body;
+        let orderId = body?.merchantTransactionId || body?.udf2
+        if (!orderId) {
+            console.log('PayU Webhook: Missing order identifier in payload', body);
+            res.status(200).send({ error: 'Missing order identifier' });
+            return;
+        }
+        let originalOrder = await getOrder(req, orderId);
+        let updatedConfig = withClientConfigOverrides(this.baseConfig, req, originalOrder);
+        this.initParams(updatedConfig)
+        const payuRest = await this.verifyResult(req);
+        let result = !!payuRest.STATUS;
+        req.body.STATUS = payuRest.STATUS;
+        req.body.TXNID = payuRest.TXNID;
+        req.body.ORDERID = payuRest.ORDERID || req.query.order_id;
+        req.body.extras = payuRest.data;
+        let isCancelled = !!payuRest.cancelled;
+
+        updateTransaction(req, res, true)
     }
 }
 

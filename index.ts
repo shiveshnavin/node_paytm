@@ -102,7 +102,7 @@ export function createPaymentMiddleware(
     subApp.all('/callback', authenticationMiddleware, (req, res) => {
         pc.callback(req, res);
     });
-    subApp.all('/api/webhook', authenticationMiddleware, (req, res) => {
+    subApp.all(['/api/webhook', '/api/webhook/*'], authenticationMiddleware, (req, res) => {
         pc.webhook(req, res);
     });
     subApp.all('/api/status', authenticationMiddleware, (req, res) => {

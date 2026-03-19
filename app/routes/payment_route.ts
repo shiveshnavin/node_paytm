@@ -42,7 +42,7 @@ const paymentRoute = function (app: any, express: any, callbacks?: any) {
     router.all('/init', pc.init);
 
     router.all('/callback', pc.callback)
-    router.all('/api/webhook', pc.webhook)
+    router.all(['/api/webhook', '/api/webhook/*'], pc.webhook)
     router.all('/api/status', pc.status)
     router.all('/api/createTxn/token', pc.createTxnToken)
     router.all('/api/createTxn', pc.createTxn)
