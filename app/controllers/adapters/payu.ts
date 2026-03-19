@@ -274,7 +274,7 @@ class PayU {
         }
         let updatedConfig = withClientConfigOverrides(this.baseConfig, req, originalOrder);
         this.initParams(updatedConfig)
-        const payuRest = await this.verifyResult(req);
+        const payuRest = await this.verifyResult(req, orderId);
         let result = !!payuRest.STATUS;
         req.body.STATUS = payuRest.STATUS;
         req.body.TXNID = payuRest.TXNID;
