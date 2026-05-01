@@ -15,6 +15,9 @@ const subscriptionRoute = function (app: any, express: any, callbacks?: any) {
 
     // Subscription Management
     router.post('/init', (req, res) => sc.initSubscription(req, res));
+    router.post('/createTxn', (req, res) => sc.initSubscription(req, res));
+    router.post('/createTxn/token', (req, res) => sc.initSubscription(req, res));
+    router.get('/checkout/:id', (req, res) => sc.checkoutSubscription(req, res));
     router.get('/:id', (req, res) => sc.getSubscription(req, res));
     router.post('/:id/cancel', (req, res) => sc.cancelSubscription(req, res));
     router.get('/:id/payments', (req, res) => sc.getSubscriptionPayments(req, res));

@@ -60,15 +60,13 @@ export function renderPaytmJsCheckout(req: Request, res: Response, paytmJsToken:
     return res.send(html);
 }
 
-export function renderRazorpayCheckout(req: Request, res: Response, params: Record<string, any>, config: NPConfig, loadingSVG: string) {
-    const options = {
+export function renderRazorpayCheckout(req: Request, res: Response, params: Record<string, any>, config: NPConfig, loadingSVG: string, isSubscription: boolean = false) {
+    const options: any = {
         key: String(config.KEY),
-        amount: Number(params['TXN_AMOUNT']) * 100,
         currency: 'INR',
         name: params['PRODUCT_NAME'],
-        description: `Order # ${params['ORDER_ID']}`,
+        description: isSubscription ? `Subscription` : `Order # ${params['ORDER_ID']}`,
         image: config.theme?.logo || '',
-        order_id: params['ORDER_ID'],
         callback_url: params['CALLBACK_URL'],
         prefill: {
             name: params['NAME'],
@@ -80,11 +78,18 @@ export function renderRazorpayCheckout(req: Request, res: Response, params: Reco
         }
     };
 
-    if (wantsJson(req)) {
-        return res.json({ provider: 'razorpay', options, failForm: { action: params['CALLBACK_URL'], fields: { razorpay_order_id: params['ORDER_ID'] } }, loadingSVG });
+    if (isSubscription) {
+        options.subscription_id = params['ORDER_ID'];
+    } else {
+        options.amount = Number(params['TXN_AMOUNT']) * 100;
+        options.order_id = params['ORDER_ID'];
     }
 
-    const fail = `<div style="display:none"><form method="post" action="${params['CALLBACK_URL']}" id="fail"><input name="razorpay_order_id" value="${params['ORDER_ID']}" hidden="true"/></form></div>`;
+    if (wantsJson(req)) {
+        return res.json({ provider: 'razorpay', options, failForm: { action: params['CALLBACK_URL'], fields: isSubscription ? { razorpay_subscription_id: params['ORDER_ID'] } : { razorpay_order_id: params['ORDER_ID'] } }, loadingSVG });
+    }
+
+    const fail = `<div style="display:none"><form method="post" action="${params['CALLBACK_URL']}" id="fail"><input name="${isSubscription ? 'razorpay_subscription_id' : 'razorpay_order_id'}" value="${params['ORDER_ID']}" hidden="true"/></form></div>`;
 
     const scriptOptions = `
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

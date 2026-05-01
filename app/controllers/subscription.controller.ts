@@ -6,6 +6,8 @@ import { ISubscriptionProvider } from './adapters/interfaces';
 import { RazorpayAdapter } from './adapters/razorpay';
 import { NPUserController } from './user.controller';
 import { Utils } from '../utils/utils';
+import { renderRazorpayCheckout } from './htmlhelper';
+import { LoadingSVG } from './static/loadingsvg';
 
 export class SubscriptionController {
     private baseConfig: NPConfig;
@@ -268,17 +270,58 @@ export class SubscriptionController {
 
             await this.db.insert(this.tableNames.SUBSCRIPTION, subData);
 
-            if (req.headers.accept?.includes('application/json')) {
-                res.status(201).send(subData);
+            const responseData = {
+                ...subData,
+                orderId: subData.id,
+                payurl: config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id,
+                pname: plan.name,
+                amount: plan.amount,
+                name: user.name,
+                email: user.email,
+                phone: user.phone
+            };
+
+            if (req.headers.accept?.includes('application/json') || req.path.includes('/createTxn')) {
+                res.status(201).send(responseData);
             } else if (subData.short_url) {
-                res.redirect(subData.short_url);
+                res.redirect(config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id);
             } else {
-                 res.status(201).send(subData); // fallback
+                 res.status(201).send(responseData); // fallback
             }
 
         } catch (err: any) {
              console.error("Init Sub Error:", err);
              res.status(500).send({ message: 'Internal server error', error: err?.message });
+        }
+    }
+
+    async checkoutSubscription(req: Request, res: Response): Promise<void> {
+        try {
+            const id = req.params.id;
+            const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id }) as NPSubscription;
+            if (!sub || !sub.gateway_subscription_id) {
+                res.status(404).send({ message: 'Subscription not found or not ready.' });
+                return;
+            }
+
+            const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }) as NPPlan;
+            const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }) as NPUser;
+
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+            
+            const params = {
+                ORDER_ID: sub.gateway_subscription_id,
+                CALLBACK_URL: config.host_url + '/' + config.path_prefix + '/callback',
+                NAME: user?.name || '',
+                EMAIL: user?.email || '',
+                MOBILE_NO: user?.phone || '',
+                PRODUCT_NAME: plan?.name || ''
+            };
+
+            renderRazorpayCheckout(req, res, params, config, LoadingSVG, true);
+
+        } catch (err: any) {
+            res.status(500).send({ message: 'Error rendering checkout', error: err?.message });
         }
     }
 
