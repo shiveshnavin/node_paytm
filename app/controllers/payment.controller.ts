@@ -14,6 +14,7 @@ import { Utils } from '../utils/utils';
 import { LoadingSVG } from './static/loadingsvg';
 import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction } from '../models';
 import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
+import { handleSubscriptionWebhook } from './subscription.webhook';
 import { withClientConfigOverrides } from '../utils/buildConfig';
 
 const IDLEN = 14;
@@ -33,7 +34,7 @@ export class PaymentController {
     private baseConfig: NPConfig;
     private callbacks: any;
     private db: MultiDbORM;
-    private tableNames: NPTableNames = { USER: 'npusers', TRANSACTION: 'nptransactions' };
+    private tableNames: NPTableNames = { USER: 'npusers', TRANSACTION: 'nptransactions', PLAN: 'npplans', SUBSCRIPTION: 'npsubscriptions' };
     private useController: NPUserController;
     private viewPath = ''
 
@@ -807,8 +808,168 @@ export class PaymentController {
             }
 
             if (serviceUsed === 'Razorpay') {
-                const events = ["payment.captured", "payment.pending", "payment.failed"];
+                const events = [
+                    "payment.captured", "payment.pending", "payment.failed", 
+                    "subscription.authenticated", "subscription.paused", "subscription.resumed",
+                    "subscription.activated", "subscription.pending", "subscription.halted",
+                    "subscription.charged", "subscription.cancelled", "subscription.completed",
+                    "subscription.updated"
+                ];
                 if (req.body.event && events.indexOf(req.body.event) > -1) {
+                    const event = req.body.event;
+
+                    // Handle Subscription Events
+                    if (event.startsWith("subscription.")) {
+                        if (req.body.payload && req.body.payload.subscription && req.body.payload.subscription.entity) {
+                            const subEntity = req.body.payload.subscription.entity;
+                            const paymentEntity = req.body.payload.payment?.entity;
+                            const gateway_subscription_id = subEntity.id;
+
+                            const reqBody = (req as any).rawBody;
+                            const signature = req.headers["x-razorpay-signature"];
+                            if (signature === undefined) {
+                                res.status(200).send({ message: "Missing Razorpay signature" });
+                                return;
+                            }
+                            
+                            let signatureValid;
+                            try {
+                                signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
+                            } catch (e) {
+                                signatureValid = false;
+                            }
+
+                            if (!signatureValid) {
+                                res.status(200).send({ message: "Invalid Rzpay signature" });
+                                return;
+                            }
+
+                            // Find the local subscription
+                            const sub = await this.db.getOne(this.tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { gateway_subscription_id }) as any;
+                            if (!sub) {
+                                console.log("Subscription not found for webhook:", gateway_subscription_id);
+                                res.status(200).send({ message: "Subscription not found locally" });
+                                return;
+                            }
+                            
+                            const clientConf = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+
+                            let statusChanged = false;
+
+                            // Map Razorpay events to local subscription status
+                            switch (event) {
+                                case "subscription.authenticated":
+                                    sub.status = 'AUTHENTICATED';
+                                    statusChanged = true;
+                                    break;
+                                case "subscription.activated":
+                                case "subscription.resumed":
+                                case "subscription.updated": // An update might make it active again or just change metadata
+                                    if (subEntity.status === 'active') {
+                                        sub.status = 'ACTIVE';
+                                        statusChanged = true;
+                                    }
+                                    break;
+                                case "subscription.paused":
+                                    sub.status = 'PAUSED';
+                                    statusChanged = true;
+                                    break;
+                                case "subscription.pending":
+                                    sub.status = 'PENDING';
+                                    statusChanged = true;
+                                    break;
+                                case "subscription.halted":
+                                    sub.status = 'HALTED';
+                                    statusChanged = true;
+                                    break;
+                                case "subscription.cancelled":
+                                    sub.status = 'CANCELLED';
+                                    statusChanged = true;
+                                    break;
+                                case "subscription.completed":
+                                    sub.status = 'COMPLETED';
+                                    statusChanged = true;
+                                    break;
+                            }
+
+                            if (statusChanged) {
+                                sub.updatedAt = Date.now();
+                                await this.db.update(this.tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
+                            }
+
+                            // Trigger client payment webhook ONLY on actual charges or definitive failures
+                            if (event === "subscription.charged" && paymentEntity) {
+                                sub.status = 'ACTIVE';
+                                await this.db.update(this.tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
+
+                                // Create a new transaction record for this specific charge
+                                const txnId = 'txn_' + makeid(10);
+                                const newTxn: NPTransaction = {
+                                    id: txnId,
+                                    orderId: txnId, // Use txnId as orderId for recurring payments since there is no explicit user-created order
+                                    cusId: sub.cusId,
+                                    time: Date.now(),
+                                    status: 'TXN_SUCCESS',
+                                    name: '', // We could fetch from user, but keeping minimal
+                                    email: paymentEntity.email || '',
+                                    phone: paymentEntity.contact || '',
+                                    amount: paymentEntity.amount / 100,
+                                    pname: 'Subscription Charge',
+                                    extra: JSON.stringify(paymentEntity),
+                                    txnId: paymentEntity.id,
+                                    clientId: sub.clientId,
+                                    returnUrl: sub.returnUrl,
+                                    webhookUrl: sub.webhookUrl,
+                                    isSubscription: true,
+                                    subscriptionId: sub.id
+                                };
+
+                                await this.db.insert(this.tableNames.TRANSACTION, newTxn);
+
+                                // Trigger client webhook
+                                if (sub.webhookUrl) {
+                                    try {
+                                        await axios.post(sub.webhookUrl, newTxn);
+                                        console.log("Sent subscription webhook to ", sub.webhookUrl, 'txnId:', paymentEntity.id);
+                                    } catch (e: any) {
+                                        console.log("Error sending subscription webhook to ", sub.webhookUrl, e?.message || e);
+                                    }
+                                }
+                            } else if (event === "subscription.halted") {
+                                // Optional: Inform client of a failed recurring payment that led to a halt
+                                const txnId = 'txn_' + makeid(10);
+                                const newTxn: NPTransaction = {
+                                    id: txnId,
+                                    orderId: txnId, 
+                                    cusId: sub.cusId,
+                                    time: Date.now(),
+                                    status: 'TXN_FAILURE',
+                                    name: '',
+                                    email: '',
+                                    phone: '',
+                                    amount: 0, // Or fetch plan amount if needed
+                                    pname: 'Subscription Halted',
+                                    extra: JSON.stringify(subEntity),
+                                    txnId: '',
+                                    clientId: sub.clientId,
+                                    returnUrl: sub.returnUrl,
+                                    webhookUrl: sub.webhookUrl,
+                                    isSubscription: true,
+                                    subscriptionId: sub.id
+                                };
+                                await this.db.insert(this.tableNames.TRANSACTION, newTxn);
+                                if (sub.webhookUrl) {
+                                     try {
+                                        await axios.post(sub.webhookUrl, newTxn);
+                                    } catch (e: any) { }
+                                }
+                            }
+                            res.status(200).send({ message: "Subscription webhook processed" });
+                            return;
+                        }
+                    }
+
+                    // Handle One-time Payment Events
                     if (req.body.payload &&
                         req.body.payload.payment &&
                         req.body.payload.payment.entity) {
