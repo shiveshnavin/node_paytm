@@ -120,15 +120,18 @@ export function createPaymentMiddleware(
     subApp.all('/api/createTxn', authenticationMiddleware, (req, res) => {
         pc.createTxn(req, res);
     });
-    
+
     // Subscription Routes
     subApp.post('/api/plans', authenticationMiddleware, (req, res) => sc.createPlan(req, res));
     subApp.get('/api/plans', authenticationMiddleware, (req, res) => sc.getPlans(req, res));
     subApp.get('/api/plans/:id', authenticationMiddleware, (req, res) => sc.getPlan(req, res));
     subApp.patch('/api/plans/:id', authenticationMiddleware, (req, res) => sc.updatePlan(req, res));
     subApp.delete('/api/plans/:id', authenticationMiddleware, (req, res) => sc.deletePlan(req, res));
-    
+
     subApp.post('/api/sub/init', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
+    subApp.post('/api/sub/createTxn', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
+    subApp.post('/api/sub/createTxn/token', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
+    subApp.all('/sub/checkout/:id', (req, res) => sc.checkoutSubscription(req, res));
     subApp.get('/api/sub/:id', authenticationMiddleware, (req, res) => sc.getSubscription(req, res));
     subApp.post('/api/sub/:id/cancel', authenticationMiddleware, (req, res) => sc.cancelSubscription(req, res));
     subApp.get('/api/sub/:id/payments', authenticationMiddleware, (req, res) => sc.getSubscriptionPayments(req, res));

@@ -12,7 +12,7 @@ import { NPUserController } from './user.controller';
 import { Request, Response } from 'express';
 import { Utils } from '../utils/utils';
 import { LoadingSVG } from './static/loadingsvg';
-import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction } from '../models';
+import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction, NPSubscription } from '../models';
 import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
 import { handleSubscriptionWebhook } from './subscription.webhook';
 import { withClientConfigOverrides } from '../utils/buildConfig';
@@ -541,10 +541,34 @@ export class PaymentController {
         const myquery = { orderId: orderToFind };
 
         let objForUpdate: NPTransaction | null = null;
+        let isSubscription = false;
         try {
             objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null) as NPTransaction | null;
             if (!objForUpdate) objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, { id: orderToFind }).catch(() => null) as NPTransaction | null;
             if (!objForUpdate) objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, { ORDERID: orderToFind }).catch(() => null) as NPTransaction | null;
+
+            if (!objForUpdate) {
+                const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id: orderToFind }).catch(() => null) as NPSubscription;
+                if (sub) {
+                    isSubscription = true;
+                    objForUpdate = {
+                        id: sub.id,
+                        orderId: sub.id,
+                        cusId: sub.cusId,
+                        time: sub.createdAt || Date.now(),
+                        status: 'INITIATED',
+                        name: '',
+                        email: '',
+                        phone: '',
+                        amount: 0,
+                        pname: 'Subscription',
+                        extra: '',
+                        clientId: sub.clientId,
+                        returnUrl: sub.returnUrl || '',
+                        webhookUrl: sub.webhookUrl || ''
+                    };
+                }
+            }
         } catch {
             objForUpdate = objForUpdate || null;
         }
@@ -615,7 +639,18 @@ export class PaymentController {
         objForUpdate.extra = JSON.stringify(req.body);
 
         try {
-            await this.db.update(this.tableNames.TRANSACTION, myquery, objForUpdate);
+            if (isSubscription) {
+                await this.db.update(this.tableNames.SUBSCRIPTION, { id: orderToFind }, { status: 'AUTHENTICATED', updatedAt: Date.now() });
+                // Also persist a transaction record so status/history APIs find it
+                const existingTxn = await this.db.getOne(this.tableNames.TRANSACTION, { orderId: orderToFind }).catch(() => null);
+                if (!existingTxn) {
+                    await this.db.insert(this.tableNames.TRANSACTION, objForUpdate);
+                } else {
+                    await this.db.update(this.tableNames.TRANSACTION, { orderId: orderToFind }, objForUpdate);
+                }
+            } else {
+                await this.db.update(this.tableNames.TRANSACTION, myquery, objForUpdate);
+            }
         } catch {
             if (returnUrl) {
                 const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
@@ -691,7 +726,34 @@ export class PaymentController {
         let isCancelled = false;
 
 
-        const objForUpdate = await this.getOrder(req);
+        let objForUpdate = await this.getOrder(req);
+        let isSubscriptionCallback = false;
+
+        // Razorpay Subscription Callback Handling
+        if (!objForUpdate && req.body.razorpay_subscription_id) {
+            const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { gateway_subscription_id: req.body.razorpay_subscription_id }) as NPSubscription;
+            if (sub) {
+                isSubscriptionCallback = true;
+                // Create a virtual transaction object for the callback processor
+                objForUpdate = {
+                    id: sub.id,
+                    orderId: sub.id,
+                    cusId: sub.cusId,
+                    time: Date.now(),
+                    status: 'INITIATED',
+                    name: '',
+                    email: '',
+                    phone: '',
+                    amount: 0,
+                    pname: 'Subscription Authentication',
+                    extra: '',
+                    clientId: sub.clientId,
+                    returnUrl: sub.returnUrl || '',
+                    webhookUrl: sub.webhookUrl || ''
+                };
+            }
+        }
+
         const config = withClientConfigOverrides(this.baseConfig, req, objForUpdate);
         const payuInstance = this.getProviderInstance('PayU', withClientConfigOverrides(config, req, objForUpdate));
         const openMoneyInstance = this.getProviderInstance('OpenMoney', withClientConfigOverrides(config, req, objForUpdate));
@@ -713,31 +775,50 @@ export class PaymentController {
             }
 
         } else if (config.razor_url) {
-            let orderid = req.body.razorpay_order_id || req.query.ORDERID || req.query.order_id;
-            let liveResonse = null as any
-            if (orderid) {
-                liveResonse = await this.getProviderInstance('Razorpay', config).orders.fetch(orderid).catch(() => null);
-                req.body.extras = liveResonse
-            }
-            if (req.body.razorpay_payment_id) {
-                result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
+            if (isSubscriptionCallback) {
+                // Subscription verification: Razorpay expects payment_id + "|" + subscription_id
+                result = checksum_lib.checkRazorSignature(
                     req.body.razorpay_payment_id,
+                    req.body.razorpay_subscription_id,
                     config.SECRET,
-                    req.body.razorpay_signature)
+                    req.body.razorpay_signature
+                );
                 if (result) {
-                    req.body.STATUS = 'TXN_SUCCESS'
-                    req.body.ORDERID = req.body.razorpay_order_id
-                    req.body.TXNID = req.body.razorpay_payment_id
+                    req.body.STATUS = 'TXN_SUCCESS';
+                    req.body.ORDERID = objForUpdate?.id;
+                    req.body.TXNID = req.body.razorpay_payment_id;
+
+                    // Update local subscription status
+                    await this.db.update(this.tableNames.SUBSCRIPTION, { id: objForUpdate?.id }, { status: 'AUTHENTICATED', updatedAt: Date.now() });
                 }
-            }
-            else {
-                if (req.body.error && req.body.error.metadata && JSON.parse(req.body.error.metadata)) {
-                    const orderId = JSON.parse(req.body.error.metadata).order_id
-                    req.body.razorpay_order_id = orderId
+            } else {
+                // Standard Order verification
+                let orderid = req.body.razorpay_order_id || req.query.ORDERID || req.query.order_id;
+                let liveResonse = null as any
+                if (orderid) {
+                    liveResonse = await this.getProviderInstance('Razorpay', config).orders.fetch(orderid).catch(() => null);
+                    req.body.extras = liveResonse
                 }
-                req.body.STATUS = liveResonse?.attempts ? 'TXN_FAILURE' : 'CANCELLED';
-                req.body.ORDERID = req.body.razorpay_order_id || req.query.order_id
-                isCancelled = true;
+                if (req.body.razorpay_payment_id) {
+                    result = checksum_lib.checkRazorSignature(req.body.razorpay_order_id,
+                        req.body.razorpay_payment_id,
+                        config.SECRET,
+                        req.body.razorpay_signature)
+                    if (result) {
+                        req.body.STATUS = 'TXN_SUCCESS'
+                        req.body.ORDERID = req.body.razorpay_order_id
+                        req.body.TXNID = req.body.razorpay_payment_id
+                    }
+                }
+                else {
+                    if (req.body.error && req.body.error.metadata && JSON.parse(req.body.error.metadata)) {
+                        const orderId = JSON.parse(req.body.error.metadata).order_id
+                        req.body.razorpay_order_id = orderId
+                    }
+                    req.body.STATUS = liveResonse?.attempts ? 'TXN_FAILURE' : 'CANCELLED';
+                    req.body.ORDERID = req.body.razorpay_order_id || req.query.order_id
+                    isCancelled = true;
+                }
             }
         }
         else if (config.payu_url) {
@@ -809,7 +890,7 @@ export class PaymentController {
 
             if (serviceUsed === 'Razorpay') {
                 const events = [
-                    "payment.captured", "payment.pending", "payment.failed", 
+                    "payment.captured", "payment.pending", "payment.failed",
                     "subscription.authenticated", "subscription.paused", "subscription.resumed",
                     "subscription.activated", "subscription.pending", "subscription.halted",
                     "subscription.charged", "subscription.cancelled", "subscription.completed",
@@ -831,7 +912,7 @@ export class PaymentController {
                                 res.status(200).send({ message: "Missing Razorpay signature" });
                                 return;
                             }
-                            
+
                             let signatureValid;
                             try {
                                 signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
@@ -851,7 +932,7 @@ export class PaymentController {
                                 res.status(200).send({ message: "Subscription not found locally" });
                                 return;
                             }
-                            
+
                             const clientConf = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
 
                             let statusChanged = false;
@@ -940,7 +1021,7 @@ export class PaymentController {
                                 const txnId = 'txn_' + makeid(10);
                                 const newTxn: NPTransaction = {
                                     id: txnId,
-                                    orderId: txnId, 
+                                    orderId: txnId,
                                     cusId: sub.cusId,
                                     time: Date.now(),
                                     status: 'TXN_FAILURE',
@@ -959,7 +1040,7 @@ export class PaymentController {
                                 };
                                 await this.db.insert(this.tableNames.TRANSACTION, newTxn);
                                 if (sub.webhookUrl) {
-                                     try {
+                                    try {
                                         await axios.post(sub.webhookUrl, newTxn);
                                     } catch (e: any) { }
                                 }
