@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import exphbs from 'express-handlebars';
 import mongoose from 'mongoose';
 import { PaymentController } from './app/controllers/payment.controller';
+import { SubscriptionController } from './app/controllers/subscription.controller';
 import { NPCallbacks, NPConfig, NPConfigTheme, NPTableNames } from './app/models';
 import { MultiDbORM } from 'multi-db-orm';
 import { buildConfig, withClientConfigOverrides } from './app/utils/buildConfig';
@@ -72,6 +73,7 @@ export function createPaymentMiddleware(
 
     callbacks = callbacks || config.callbacks;
     const pc = new PaymentController(config, db, callbacks, tableNames);
+    const sc = new SubscriptionController(config, db, tableNames);
 
     subApp.use((req: Request, res: Response, next: NextFunction) => {
         let _client = withClientConfigOverrides(config, req);
@@ -96,6 +98,7 @@ export function createPaymentMiddleware(
         next();
     });
 
+    // Payment Routes
     subApp.all('/init', authenticationMiddleware, (req, res) => {
         pc.init(req, res);
     });
@@ -117,6 +120,20 @@ export function createPaymentMiddleware(
     subApp.all('/api/createTxn', authenticationMiddleware, (req, res) => {
         pc.createTxn(req, res);
     });
+    
+    // Subscription Routes
+    subApp.post('/api/plans', authenticationMiddleware, (req, res) => sc.createPlan(req, res));
+    subApp.get('/api/plans', authenticationMiddleware, (req, res) => sc.getPlans(req, res));
+    subApp.get('/api/plans/:id', authenticationMiddleware, (req, res) => sc.getPlan(req, res));
+    subApp.patch('/api/plans/:id', authenticationMiddleware, (req, res) => sc.updatePlan(req, res));
+    subApp.delete('/api/plans/:id', authenticationMiddleware, (req, res) => sc.deletePlan(req, res));
+    
+    subApp.post('/api/sub/init', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
+    subApp.get('/api/sub/:id', authenticationMiddleware, (req, res) => sc.getSubscription(req, res));
+    subApp.post('/api/sub/:id/cancel', authenticationMiddleware, (req, res) => sc.cancelSubscription(req, res));
+    subApp.get('/api/sub/:id/payments', authenticationMiddleware, (req, res) => sc.getSubscriptionPayments(req, res));
+
+
     subApp.all('/', authenticationMiddleware, (req, res) => {
         pc.init(req, res);
     });

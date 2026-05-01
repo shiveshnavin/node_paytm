@@ -33,6 +33,40 @@ export interface NPTransaction {
     state?: string
     returnUrl: string
     webhookUrl: string
+    isSubscription?: boolean
+    subscriptionId?: string
+}
+
+export interface NPPlan {
+    id: string; // Provided by the client
+    name: string;
+    description?: string;
+    amount: number;
+    currency: string;
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+    trial_days?: number;
+    gateway_plan_id?: string;
+    clientId: string;
+    is_deleted?: boolean;
+    createdAt?: number;
+    updatedAt?: number;
+}
+
+export interface NPSubscription {
+    id: string; // Generated internally or provided by client
+    planId: string; // References NPPlan.id
+    cusId: string; // References NPUser.id
+    status: string; // 'CREATED', 'AUTHENTICATED', 'ACTIVE', 'CANCELLED', 'HALTED', 'COMPLETED', 'EXPIRED'
+    gateway_subscription_id?: string;
+    short_url?: string;
+    clientId: string;
+    returnUrl?: string;
+    webhookUrl?: string;
+    createdAt?: number;
+    updatedAt?: number;
+    expire_by?: number;
+    start_at?: number;
 }
 
 export interface NPCallbacks {
@@ -101,7 +135,9 @@ export type NPConfigOverrides = {
 
 export type NPTableNames = {
     USER: string,
-    TRANSACTION: string
+    TRANSACTION: string,
+    PLAN: string,
+    SUBSCRIPTION: string
 }
 
 export type NPParam = {
