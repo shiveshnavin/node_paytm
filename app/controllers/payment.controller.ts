@@ -12,7 +12,7 @@ import { NPUserController } from './user.controller';
 import { Request, Response } from 'express';
 import { Utils } from '../utils/utils';
 import { LoadingSVG } from './static/loadingsvg';
-import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction, NPSubscription } from '../models';
+import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction, NPSubscription, NPPlan } from '../models';
 import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
 import { handleSubscriptionWebhook } from './subscription.webhook';
 import { withClientConfigOverrides } from '../utils/buildConfig';
@@ -551,17 +551,19 @@ export class PaymentController {
                 const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id: orderToFind }).catch(() => null) as NPSubscription;
                 if (sub) {
                     isSubscription = true;
+                    const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
+                    const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
                     objForUpdate = {
                         id: sub.id,
                         orderId: sub.id,
                         cusId: sub.cusId,
                         time: sub.createdAt || Date.now(),
                         status: 'INITIATED',
-                        name: '',
-                        email: '',
-                        phone: '',
-                        amount: 0,
-                        pname: 'Subscription',
+                        name: user?.name || '',
+                        email: user?.email || '',
+                        phone: user?.phone || '',
+                        amount: plan?.amount || 0,
+                        pname: plan?.name || 'Subscription',
                         extra: '',
                         clientId: sub.clientId,
                         returnUrl: sub.returnUrl || '',
@@ -734,6 +736,8 @@ export class PaymentController {
             const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { gateway_subscription_id: req.body.razorpay_subscription_id }) as NPSubscription;
             if (sub) {
                 isSubscriptionCallback = true;
+                const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
+                const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
                 // Create a virtual transaction object for the callback processor
                 objForUpdate = {
                     id: sub.id,
@@ -741,11 +745,11 @@ export class PaymentController {
                     cusId: sub.cusId,
                     time: Date.now(),
                     status: 'INITIATED',
-                    name: '',
-                    email: '',
-                    phone: '',
-                    amount: 0,
-                    pname: 'Subscription Authentication',
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    phone: user?.phone || '',
+                    amount: plan?.amount || 0,
+                    pname: plan?.name || 'Subscription Authentication',
                     extra: '',
                     clientId: sub.clientId,
                     returnUrl: sub.returnUrl || '',
