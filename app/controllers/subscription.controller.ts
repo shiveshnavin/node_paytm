@@ -157,14 +157,16 @@ export class SubscriptionController {
                 return;
             }
 
-            const { name, description, amount, interval, period } = req.body;
+            const { name, description, amount, interval, period, currency, trial_days } = req.body;
             
             // Check if Gateway immutable fields are changing
             let needsNewGatewayPlan = false;
             if (
                 (amount !== undefined && parseFloat(amount) !== plan.amount) ||
                 (interval !== undefined && parseInt(interval, 10) !== plan.interval) ||
-                (period !== undefined && period !== plan.period)
+                (period !== undefined && period !== plan.period) ||
+                (currency !== undefined && currency !== plan.currency) ||
+                (trial_days !== undefined && parseInt(trial_days, 10) !== plan.trial_days)
             ) {
                 needsNewGatewayPlan = true;
             }
@@ -175,6 +177,8 @@ export class SubscriptionController {
             if (amount !== undefined) updatedPlan.amount = parseFloat(amount);
             if (interval !== undefined) updatedPlan.interval = parseInt(interval, 10);
             if (period !== undefined) updatedPlan.period = period;
+            if (currency !== undefined) updatedPlan.currency = currency;
+            if (trial_days !== undefined) updatedPlan.trial_days = parseInt(trial_days, 10);
 
             if (needsNewGatewayPlan) {
                  const config = withClientConfigOverrides(this.baseConfig, req);

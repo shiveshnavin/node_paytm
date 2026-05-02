@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import RazorPay from 'razorpay';
 import axios from 'axios';
 import { MultiDbORM } from 'multi-db-orm';
-import { NPConfig, NPTableNames, NPTransaction } from '../models';
+import { NPConfig, NPTableNames, NPTransaction, NPPlan, NPUser } from '../models';
 import { withClientConfigOverrides } from '../utils/buildConfig';
 
 export async function handleSubscriptionWebhook(
@@ -57,6 +57,39 @@ export async function handleSubscriptionWebhook(
             case "subscription.authenticated":
                 sub.status = 'AUTHENTICATED';
                 statusChanged = true;
+                
+                // Trigger Setup Success Webhook
+                const planAuth = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
+                const userAuth = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+                const authTxn: NPTransaction = {
+                    id: sub.id,
+                    orderId: sub.id,
+                    cusId: sub.cusId,
+                    time: Date.now(),
+                    status: 'TXN_SUCCESS',
+                    name: userAuth?.name || '',
+                    email: userAuth?.email || '',
+                    phone: userAuth?.phone || '',
+                    amount: planAuth?.amount || 0,
+                    pname: planAuth?.name || 'Subscription Authentication',
+                    extra: JSON.stringify(subEntity),
+                    txnId: paymentEntity?.id || '',
+                    clientId: sub.clientId,
+                    returnUrl: sub.returnUrl || '',
+                    webhookUrl: sub.webhookUrl || '',
+                    isSubscription: true,
+                    subscriptionId: sub.id
+                };
+
+                // Persist if doesn't exist
+                const existingAuth = await db.getOne(tableNames.TRANSACTION, { orderId: sub.id }).catch(() => null);
+                if (!existingAuth) {
+                    await db.insert(tableNames.TRANSACTION, authTxn);
+                }
+
+                if (sub.webhookUrl) {
+                    try { await axios.post(sub.webhookUrl, authTxn); } catch (e) { }
+                }
                 break;
             case "subscription.activated":
             case "subscription.resumed":
@@ -98,6 +131,9 @@ export async function handleSubscriptionWebhook(
             sub.status = 'ACTIVE';
             await db.update(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
 
+            const plan = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
+            const user = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+
             // Create a new transaction record for this specific charge
             const txnId = 'txn_' + makeid(10);
             const newTxn: NPTransaction = {
@@ -106,11 +142,11 @@ export async function handleSubscriptionWebhook(
                 cusId: sub.cusId,
                 time: Date.now(),
                 status: 'TXN_SUCCESS',
-                name: '', // We could fetch from user, but keeping minimal
-                email: paymentEntity.email || '',
-                phone: paymentEntity.contact || '',
+                name: user?.name || '',
+                email: paymentEntity.email || user?.email || '',
+                phone: paymentEntity.contact || user?.phone || '',
                 amount: paymentEntity.amount / 100,
-                pname: 'Subscription Charge',
+                pname: plan?.name || 'Subscription Charge',
                 extra: JSON.stringify(paymentEntity),
                 txnId: paymentEntity.id,
                 clientId: sub.clientId,
@@ -132,6 +168,8 @@ export async function handleSubscriptionWebhook(
                 }
             }
         } else if (event === "subscription.halted") {
+            const plan = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
+            const user = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
             // Optional: Inform client of a failed recurring payment that led to a halt
             const txnId = 'txn_' + makeid(10);
             const newTxn: NPTransaction = {
@@ -140,11 +178,11 @@ export async function handleSubscriptionWebhook(
                 cusId: sub.cusId,
                 time: Date.now(),
                 status: 'TXN_FAILURE',
-                name: '',
-                email: '',
-                phone: '',
-                amount: 0, // Or fetch plan amount if needed
-                pname: 'Subscription Halted',
+                name: user?.name || '',
+                email: user?.email || '',
+                phone: user?.phone || '',
+                amount: plan?.amount || 0,
+                pname: plan?.name ? `${plan.name} (Halted)` : 'Subscription Halted',
                 extra: JSON.stringify(subEntity),
                 txnId: '',
                 clientId: sub.clientId,
