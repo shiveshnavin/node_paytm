@@ -1,6 +1,6 @@
 {
   "name": "node-paytmpg",
-  "version": "8.0.6",
+  "version": "8.0.7",
   "description": "Payment Gateway Integration using NodeJS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
