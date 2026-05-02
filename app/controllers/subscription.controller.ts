@@ -340,7 +340,7 @@ export class SubscriptionController {
 
             // Optionally sync from provider
             if (req.query.sync && sub.gateway_subscription_id) {
-                const config = withClientConfigOverrides(this.baseConfig, req);
+                const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
                 const provider = this.getProvider(config);
                 if (provider) {
                     try {
@@ -371,6 +371,28 @@ export class SubscriptionController {
         }
     }
 
+    async getSubscriptions(req: Request, res: Response): Promise<void> {
+        try {
+            const clientId = req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
+            const query: any = {};
+            if (clientId) {
+                query.clientId = clientId;
+            }
+            
+            const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
+            const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
+
+            const subs = await this.db.get(this.tableNames.SUBSCRIPTION, query, {
+                sort: [{ field: 'createdAt', order: 'desc' }],
+                limit: limit, offset: offset
+            });
+
+            res.send({ limit, offset, count: subs.length, subscriptions: subs });
+        } catch (err: any) {
+            res.status(500).send({ message: 'Error fetching subscriptions', error: err?.message });
+        }
+    }
+
     async cancelSubscription(req: Request, res: Response): Promise<void> {
         try {
             const id = req.params.id;
@@ -387,7 +409,7 @@ export class SubscriptionController {
                 return;
             }
 
-            const config = withClientConfigOverrides(this.baseConfig, req);
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
             const provider = this.getProvider(config);
 
             if (provider && sub.gateway_subscription_id) {
@@ -420,6 +442,8 @@ export class SubscriptionController {
                 res.status(404).send({ message: 'Subscription not found' });
                 return;
             }
+
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
 
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
