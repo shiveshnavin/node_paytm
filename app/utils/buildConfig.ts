@@ -153,7 +153,7 @@ function validateOpenMoneyConfig(config: Record<string, any>) {
 export function withClientConfigOverrides(config: NPConfig, req: Request, orderData?: NPTransaction): NPConfig {
     let _client = config;
     if (config.getClientConfig && (req || orderData?.clientId)) {
-        const clientId = orderData?.clientId || req.headers['x-client-id'] as string || req.query.client_id as string || req.body.client_id as string || req.body.CLIENT_ID as string || req.query.CLIENT_ID as string;
+        const clientId = orderData?.clientId || req.headers['x-client-id'] as string || req.query.client_id as string || req.body.client_id as string || req.body.CLIENT_ID as string || req.body.clientId || req.query.clientId || req.query.CLIENT_ID as string;
         if (clientId) {
             const clientConfig = config.getClientConfig(clientId);
             if (clientConfig) {

@@ -8,6 +8,7 @@
     "start": "node example.js",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build:ts": "tsc -p tsconfig.json",
+    "release": "npm run build && git add . && git add package.json && git commit -m Update-files | npm version patch && npm login && npm publish && git add package.json && git commit -m Update-version | git push",
     "copy:views": "copyfiles -u 1 \"app/views/**/*\" dist/app",
     "copy:public": "copyfiles -u 1 \"public/**/*\" dist/public",
     "build": "npm-run-all clean build:ts copy:views copy:public",
