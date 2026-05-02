@@ -14,6 +14,7 @@ const subscriptionRoute = function (app: any, express: any, callbacks?: any) {
     router.delete('/plans/:id', (req, res) => sc.deletePlan(req, res));
 
     // Subscription Management
+    router.get('/', (req, res) => sc.getSubscriptions(req, res));
     router.post('/init', (req, res) => sc.initSubscription(req, res));
     router.post('/createTxn', (req, res) => sc.initSubscription(req, res));
     router.post('/createTxn/token', (req, res) => sc.initSubscription(req, res));

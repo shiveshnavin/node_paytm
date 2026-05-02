@@ -128,6 +128,7 @@ export function createPaymentMiddleware(
     subApp.patch('/api/plans/:id', authenticationMiddleware, (req, res) => sc.updatePlan(req, res));
     subApp.delete('/api/plans/:id', authenticationMiddleware, (req, res) => sc.deletePlan(req, res));
 
+    subApp.get('/api/sub', authenticationMiddleware, (req, res) => sc.getSubscriptions(req, res));
     subApp.post('/api/sub/init', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
     subApp.post('/api/sub/createTxn', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
     subApp.post('/api/sub/createTxn/token', authenticationMiddleware, (req, res) => sc.initSubscription(req, res));
