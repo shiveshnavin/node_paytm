@@ -374,9 +374,26 @@ export class SubscriptionController {
     async getSubscriptions(req: Request, res: Response): Promise<void> {
         try {
             const clientId = req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
+            const userId = req.query.userId || req.query.user_id || req.query.cusId;
+            const userEmail = req.query.userEmail || req.query.user_email || req.query.email;
+
             const query: any = {};
             if (clientId) {
                 query.clientId = clientId;
+            }
+
+            if (userId) {
+                query.cusId = userId;
+            }
+
+            if (userEmail) {
+                const user = await this.db.getOne(this.tableNames.USER, { email: userEmail }).catch(() => null) as NPUser;
+                if (user) {
+                    query.cusId = user.id;
+                } else {
+                    res.send({ limit: 20, offset: 0, count: 0, subscriptions: [] });
+                    return;
+                }
             }
             
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
