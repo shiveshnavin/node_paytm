@@ -80,13 +80,14 @@ export class RazorpayAdapter implements ISubscriptionProvider {
         } catch (e) {
             if (clientConfig && jsonBody && jsonBody.payload && jsonBody.payload.payment && jsonBody.payload.payment.entity) {
                 let orderId = jsonBody?.payload?.payment?.entity?.order_id;
-                let captureStatusClaimed = jsonBody?.payload?.payment?.entity?.status;
+                let captureStatusClaimed = ['captured', 'authorized', 'paid'].includes(jsonBody?.payload?.payment?.entity?.status);
                 console.log("Error validating Razorpay signature:", e);
                 if (orderId) {
                     console.log("Attempting fallback validation method using GET Order", orderId);
                     try {
                         const orderDetails = await this.getOrder(orderId, clientConfig as NPConfig);
-                        if (orderDetails && orderDetails.id === orderId && orderDetails.status === captureStatusClaimed) {
+                        const captureStatusActual = ['captured', 'authorized', 'paid'].includes(orderDetails?.status);
+                        if (orderDetails && orderDetails.id === orderId && captureStatusActual === captureStatusClaimed) {
                             console.log("Fallback validation successful for order:", orderId);
                             return true;
                         } else {
