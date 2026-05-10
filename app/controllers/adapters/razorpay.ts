@@ -85,7 +85,7 @@ export class RazorpayAdapter implements ISubscriptionProvider {
                 if (orderId) {
                     console.log("Attempting fallback validation method using GET Order", orderId);
                     try {
-                        const orderDetails = await this.getOrder(orderId, { KEY: '', SECRET: secret } as NPConfig);
+                        const orderDetails = await this.getOrder(orderId, clientConfig as NPConfig);
                         if (orderDetails && orderDetails.id === orderId && orderDetails.status === captureStatusClaimed) {
                             console.log("Fallback validation successful for order:", orderId);
                             return true;
