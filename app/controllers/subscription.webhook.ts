@@ -138,7 +138,7 @@ export async function handleSubscriptionWebhook(
             const user = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
 
             // Create a new transaction record for this specific charge
-            const txnId = 'txn_' + makeid(10);
+            const txnId = paymentEntity.order_id || ('order_' + makeid(10));
             const newTxn: NPTransaction = {
                 id: txnId,
                 orderId: txnId, // Use txnId as orderId for recurring payments since there is no explicit user-created order
