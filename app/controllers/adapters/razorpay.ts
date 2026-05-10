@@ -73,7 +73,10 @@ export class RazorpayAdapter implements ISubscriptionProvider {
 
     async validateWebhookSignature(reqBody: string, signature: string, secret: string, jsonBody: any, clientConfig: NPConfig): Promise<boolean> {
         try {
-            return RazorPay.validateWebhookSignature(reqBody, signature, secret);
+            let validity = RazorPay.validateWebhookSignature(reqBody, signature, secret);
+            if (!validity) {
+                throw new Error("Invalid signature");
+            }
         } catch (e) {
             if (clientConfig && jsonBody && jsonBody.payload && jsonBody.payload.payment && jsonBody.payload.payment.entity) {
                 let orderId = jsonBody?.payload?.payment?.entity?.order_id;
