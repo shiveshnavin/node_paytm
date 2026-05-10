@@ -22,21 +22,10 @@ export async function handleSubscriptionWebhook(
         const gateway_subscription_id = subEntity.id;
 
         const reqBody = (req as any).rawBody;
+        const jsonBody = req.body;
         const signature = req.headers["x-razorpay-signature"];
         if (signature === undefined) {
             res.status(200).send({ message: "Missing Razorpay signature" });
-            return;
-        }
-        
-        let signatureValid;
-        try {
-            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature as string, config.SECRET);
-        } catch (e) {
-            signatureValid = false;
-        }
-
-        if (!signatureValid) {
-            res.status(200).send({ message: "Invalid Rzpay signature" });
             return;
         }
 
@@ -47,8 +36,20 @@ export async function handleSubscriptionWebhook(
             res.status(200).send({ message: "Subscription not found locally" });
             return;
         }
-        
+
         const clientConf = withClientConfigOverrides(baseConfig, req, { clientId: sub.clientId } as any);
+
+        let signatureValid;
+        try {
+            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature as string, config.SECRET, jsonBody, clientConf);
+        } catch (e) {
+            signatureValid = false;
+        }
+
+        if (!signatureValid) {
+            res.status(200).send({ message: "Invalid Rzpay signature" });
+            return;
+        }
 
         let statusChanged = false;
 
@@ -57,7 +58,7 @@ export async function handleSubscriptionWebhook(
             case "subscription.authenticated":
                 sub.status = 'AUTHENTICATED';
                 statusChanged = true;
-                
+
                 // Trigger Setup Success Webhook
                 const planAuth = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
                 const userAuth = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
@@ -174,7 +175,7 @@ export async function handleSubscriptionWebhook(
             const txnId = 'txn_' + makeid(10);
             const newTxn: NPTransaction = {
                 id: txnId,
-                orderId: txnId, 
+                orderId: txnId,
                 cusId: sub.cusId,
                 time: Date.now(),
                 status: 'TXN_FAILURE',
@@ -193,7 +194,7 @@ export async function handleSubscriptionWebhook(
             };
             await db.insert(tableNames.TRANSACTION, newTxn);
             if (sub.webhookUrl) {
-                 try {
+                try {
                     await axios.post(sub.webhookUrl, newTxn);
                 } catch (e: any) { }
             }

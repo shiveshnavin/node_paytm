@@ -940,7 +940,7 @@ export class PaymentController {
                         }
                         let signatureValid
                         try {
-                            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET);
+                            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET, req.body, config);
                         } catch (e) {
                             signatureValid = false
                         }

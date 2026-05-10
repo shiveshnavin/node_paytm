@@ -65,4 +65,36 @@ export class RazorpayAdapter implements ISubscriptionProvider {
         const instance = this.getInstance(config);
         return await instance.subscriptions.cancel(gatewayId, cancelAtCycleEnd);
     }
+
+    async getOrder(orderId: string, config: NPConfig): Promise<any> {
+        const instance = this.getInstance(config);
+        return await instance.orders.fetch(orderId);
+    }
+
+    async validateWebhookSignature(reqBody: string, signature: string, secret: string, jsonBody: any, clientConfig: NPConfig): Promise<boolean> {
+        try {
+            return RazorPay.validateWebhookSignature(reqBody, signature, secret);
+        } catch (e) {
+            if (clientConfig && jsonBody && jsonBody.payload && jsonBody.payload.payment && jsonBody.payload.payment.entity) {
+                let orderId = jsonBody?.payload?.payment?.entity?.order_id;
+                let captureStatusClaimed = jsonBody?.payload?.payment?.entity?.status;
+                console.log("Error validating Razorpay signature:", e);
+                if (orderId) {
+                    console.log("Attempting fallback validation method using GET Order", orderId);
+                    try {
+                        const orderDetails = await this.getOrder(orderId, { KEY: '', SECRET: secret } as NPConfig);
+                        if (orderDetails && orderDetails.id === orderId && orderDetails.status === captureStatusClaimed) {
+                            console.log("Fallback validation successful for order:", orderId);
+                            return true;
+                        } else {
+                            console.log("Fallback validation failed: Order details do not match for order:", orderId, "Order details:", orderDetails);
+                        }
+                    } catch (e) {
+                        console.log("Error in fallback validation:", e);
+                    }
+                }
+            }
+            return false;
+        }
+    }
 }
