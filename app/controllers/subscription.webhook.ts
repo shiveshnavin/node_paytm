@@ -4,6 +4,7 @@ import axios from 'axios';
 import { MultiDbORM } from 'multi-db-orm';
 import { NPConfig, NPTableNames, NPTransaction, NPPlan, NPUser } from '../models';
 import { withClientConfigOverrides } from '../utils/buildConfig';
+import { RazorpayAdapter } from './adapters/razorpay';
 
 export async function handleSubscriptionWebhook(
     req: Request,
@@ -38,10 +39,11 @@ export async function handleSubscriptionWebhook(
         }
 
         const clientConf = withClientConfigOverrides(baseConfig, req, { clientId: sub.clientId } as any);
+        const razorPayInstance = new RazorpayAdapter();
 
         let signatureValid;
         try {
-            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature as string, config.SECRET, jsonBody, clientConf);
+            signatureValid = await razorPayInstance.validateWebhookSignature(reqBody, signature as string, config.SECRET, jsonBody, clientConf);
         } catch (e) {
             signatureValid = false;
         }

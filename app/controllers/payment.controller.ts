@@ -16,6 +16,7 @@ import { NPConfig, NPParam, NPTableNames, NPUser, NPTransaction, NPSubscription,
 import { sendAutoPostForm, renderRazorpayCheckout, renderPaytmJsCheckout, renderView } from './htmlhelper';
 import { handleSubscriptionWebhook } from './subscription.webhook';
 import { withClientConfigOverrides } from '../utils/buildConfig';
+import { RazorpayAdapter } from './adapters/razorpay';
 
 const IDLEN = 14;
 
@@ -935,15 +936,19 @@ export class PaymentController {
                         const signature = req.headers["x-razorpay-signature"];
                         console.log("Razorpay webhook signature:", signature);
                         if (signature === undefined) {
+                            console.log("Razorpay webhook missing signature");
                             res.status(200).send({ message: "Missing Razorpay signature" });
                             return;
                         }
                         let signatureValid
+                        const razorPayInstance = this.getProviderInstance(serviceUsed, config) as RazorpayAdapter;
+
                         try {
-                            signatureValid = RazorPay.validateWebhookSignature(reqBody, signature, config.SECRET, req.body, config);
+                            signatureValid = await razorPayInstance.validateWebhookSignature(reqBody, signature as string, config.SECRET, req.body, config);
                         } catch (e) {
                             signatureValid = false
                         }
+                        console.log("Razorpay webhook signature valid:", signatureValid);
                         if (signatureValid) {
                             if (event === events[0]) {
                                 req.body.STATUS = "TXN_SUCCESS";
@@ -961,10 +966,12 @@ export class PaymentController {
                             }, 3000);
                         }
                         else {
+                            console.log("Razorpay webhook invalid signature");
                             res.status(200).send({ message: "Invalid Rzpay signature" });
                         }
                     }
                     else {
+                        console.log("Razorpay webhook invalid payload");
                         res.status(200).send({ message: "Invalid Payload" });
                     }
                 }
