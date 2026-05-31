@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import RazorPay from 'razorpay';
 import axios from 'axios';
 import { MultiDbORM } from 'multi-db-orm';
-import { NPConfig, NPTableNames, NPTransaction, NPPlan, NPUser } from '../models';
+import { NPConfig, NPTableNames, NPTransaction, NPPlan, NPUser, NPSubscription } from '../models';
 import { withClientConfigOverrides } from '../utils/buildConfig';
 import { RazorpayAdapter } from './adapters/razorpay';
 
@@ -31,7 +31,7 @@ export async function handleSubscriptionWebhook(
         }
 
         // Find the local subscription
-        const sub = await db.getOne(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { gateway_subscription_id }) as any;
+        const sub = await db.getOne(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { gateway_subscription_id }) as NPSubscription;
         if (!sub) {
             console.log("Subscription not found for webhook:", gateway_subscription_id);
             res.status(200).send({ message: "Subscription not found locally" });
@@ -77,6 +77,7 @@ export async function handleSubscriptionWebhook(
                     pname: planAuth?.name || 'Subscription Authentication',
                     extra: JSON.stringify(subEntity),
                     txnId: paymentEntity?.id || '',
+                    state: sub.state,
                     clientId: sub.clientId,
                     returnUrl: sub.returnUrl || '',
                     webhookUrl: sub.webhookUrl || '',
@@ -151,6 +152,7 @@ export async function handleSubscriptionWebhook(
                 amount: paymentEntity.amount / 100,
                 pname: plan?.name || 'Subscription Charge',
                 extra: JSON.stringify(paymentEntity),
+                state: sub.state,
                 txnId: paymentEntity.id,
                 clientId: sub.clientId,
                 returnUrl: sub.returnUrl,
@@ -188,6 +190,7 @@ export async function handleSubscriptionWebhook(
                 pname: plan?.name ? `${plan.name} (Halted)` : 'Subscription Halted',
                 extra: JSON.stringify(subEntity),
                 txnId: '',
+                state: sub.state,
                 clientId: sub.clientId,
                 returnUrl: sub.returnUrl,
                 webhookUrl: sub.webhookUrl,

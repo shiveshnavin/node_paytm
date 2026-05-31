@@ -27,10 +27,10 @@ export interface NPTransaction {
     amount: Number,
     pname: string,
     extra: string
+    state?: string
     readonly?: string,
     txnId?: string,
     clientId: string,
-    state?: string
     returnUrl: string
     webhookUrl: string
     isSubscription?: boolean
@@ -67,6 +67,8 @@ export interface NPSubscription {
     updatedAt?: number;
     expire_by?: number;
     start_at?: number;
+    extra: string
+    state: string
 }
 
 export interface NPCallbacks {

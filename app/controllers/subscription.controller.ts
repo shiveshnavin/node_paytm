@@ -43,6 +43,8 @@ export class SubscriptionController {
             cusId: 'user_sample',
             status: 'CREATED',
             clientId: 'client_1',
+            extra: '',
+            state: '',
             gateway_subscription_id: 'gw_sub_sample'
         };
         this.db.create(this.tableNames.PLAN, planSample).catch(() => { });
@@ -118,7 +120,7 @@ export class SubscriptionController {
             if (clientId) {
                 query.clientId = clientId;
             }
-            
+
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
 
@@ -151,14 +153,14 @@ export class SubscriptionController {
         try {
             const id = req.params.id;
             const plan = await this.db.getOne(this.tableNames.PLAN, { id, is_deleted: false }) as NPPlan;
-            
+
             if (!plan) {
                 res.status(404).send({ message: 'Plan not found' });
                 return;
             }
 
             const { name, description, amount, interval, period, currency, trial_days } = req.body;
-            
+
             // Check if Gateway immutable fields are changing
             let needsNewGatewayPlan = false;
             if (
@@ -181,17 +183,17 @@ export class SubscriptionController {
             if (trial_days !== undefined) updatedPlan.trial_days = parseInt(trial_days, 10);
 
             if (needsNewGatewayPlan) {
-                 const config = withClientConfigOverrides(this.baseConfig, req);
-                 const provider = this.getProvider(config);
-                 if (provider) {
+                const config = withClientConfigOverrides(this.baseConfig, req);
+                const provider = this.getProvider(config);
+                if (provider) {
                     try {
                         const newGatewayId = await provider.createPlan(updatedPlan, config);
                         updatedPlan.gateway_plan_id = newGatewayId;
                     } catch (gwErr: any) {
-                         res.status(500).send({ message: 'Failed to create updated plan on Gateway', error: gwErr?.message });
-                         return;
+                        res.status(500).send({ message: 'Failed to create updated plan on Gateway', error: gwErr?.message });
+                        return;
                     }
-                 }
+                }
             }
 
             await this.db.update(this.tableNames.PLAN, { id }, updatedPlan);
@@ -257,6 +259,8 @@ export class SubscriptionController {
                 clientId: CLIENT_ID || req.query.client_id || '',
                 returnUrl: returnUrl || '',
                 webhookUrl: webhookUrl || '',
+                extra: (req.body.EXTRA || ''),
+                state: req.body.STATE || '',
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             };
@@ -267,9 +271,9 @@ export class SubscriptionController {
                 subData.gateway_subscription_id = gateway_sub_id;
                 subData.short_url = short_url;
             } catch (gwErr: any) {
-                 console.error("Gateway Sub Error:", gwErr);
-                 res.status(500).send({ message: 'Failed to initialize subscription on gateway', error: gwErr?.message });
-                 return;
+                console.error("Gateway Sub Error:", gwErr);
+                res.status(500).send({ message: 'Failed to initialize subscription on gateway', error: gwErr?.message });
+                return;
             }
 
             await this.db.insert(this.tableNames.SUBSCRIPTION, subData);
@@ -290,12 +294,12 @@ export class SubscriptionController {
             } else if (subData.short_url) {
                 res.redirect(config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id);
             } else {
-                 res.status(201).send(responseData); // fallback
+                res.status(201).send(responseData); // fallback
             }
 
         } catch (err: any) {
-             console.error("Init Sub Error:", err);
-             res.status(500).send({ message: 'Internal server error', error: err?.message });
+            console.error("Init Sub Error:", err);
+            res.status(500).send({ message: 'Internal server error', error: err?.message });
         }
     }
 
@@ -312,7 +316,7 @@ export class SubscriptionController {
             const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }) as NPUser;
 
             const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
-            
+
             const params = {
                 ORDER_ID: sub.gateway_subscription_id,
                 CALLBACK_URL: config.host_url + '/' + config.path_prefix + '/callback',
@@ -346,7 +350,7 @@ export class SubscriptionController {
                     try {
                         const gwData = await provider.getSubscription(sub.gateway_subscription_id, config);
                         let newStatus = sub.status;
-                        
+
                         if (gwData.status === 'active') newStatus = 'ACTIVE';
                         else if (gwData.status === 'authenticated') newStatus = 'AUTHENTICATED';
                         else if (gwData.status === 'cancelled') newStatus = 'CANCELLED';
@@ -395,7 +399,7 @@ export class SubscriptionController {
                     return;
                 }
             }
-            
+
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
 
@@ -414,7 +418,7 @@ export class SubscriptionController {
         try {
             const id = req.params.id;
             const cancelAtCycleEnd = req.body.cancel_at_cycle_end === true || req.body.cancel_at_cycle_end === 'true';
-            
+
             const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id }) as NPSubscription;
             if (!sub) {
                 res.status(404).send({ message: 'Subscription not found' });
@@ -431,23 +435,23 @@ export class SubscriptionController {
 
             if (provider && sub.gateway_subscription_id) {
                 try {
-                     await provider.cancelSubscription(sub.gateway_subscription_id, cancelAtCycleEnd, config);
-                     if (!cancelAtCycleEnd) {
-                         sub.status = 'CANCELLED';
-                     }
-                     sub.updatedAt = Date.now();
-                     await this.db.update(this.tableNames.SUBSCRIPTION, { id }, sub);
-                     
-                     res.send({ message: 'Cancellation processed successfully', status: sub.status });
+                    await provider.cancelSubscription(sub.gateway_subscription_id, cancelAtCycleEnd, config);
+                    if (!cancelAtCycleEnd) {
+                        sub.status = 'CANCELLED';
+                    }
+                    sub.updatedAt = Date.now();
+                    await this.db.update(this.tableNames.SUBSCRIPTION, { id }, sub);
+
+                    res.send({ message: 'Cancellation processed successfully', status: sub.status });
                 } catch (gwErr: any) {
-                     res.status(500).send({ message: 'Failed to cancel on gateway', error: gwErr?.message || gwErr });
+                    res.status(500).send({ message: 'Failed to cancel on gateway', error: gwErr?.message || gwErr });
                 }
             } else {
-                 res.status(400).send({ message: 'No provider configured or missing gateway subscription ID' });
+                res.status(400).send({ message: 'No provider configured or missing gateway subscription ID' });
             }
 
         } catch (err: any) {
-             res.status(500).send({ message: 'Error cancelling subscription', error: err?.message });
+            res.status(500).send({ message: 'Error cancelling subscription', error: err?.message });
         }
     }
 
@@ -473,7 +477,7 @@ export class SubscriptionController {
 
             res.send({ limit, offset, count: payments.length, payments });
         } catch (err: any) {
-             res.status(500).send({ message: 'Error fetching payments', error: err?.message });
+            res.status(500).send({ message: 'Error fetching payments', error: err?.message });
         }
     }
 }
