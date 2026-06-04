@@ -8,6 +8,7 @@ import { SubscriptionController } from './app/controllers/subscription.controlle
 import { NPCallbacks, NPConfig, NPConfigTheme, NPTableNames } from './app/models';
 import { MultiDbORM } from 'multi-db-orm';
 import { buildConfig, withClientConfigOverrides } from './app/utils/buildConfig';
+import { Utils } from 'common-utils';
 
 export * from './app/models';
 
@@ -75,6 +76,17 @@ export function createPaymentMiddleware(
     const pc = new PaymentController(config, db, callbacks, tableNames);
     const sc = new SubscriptionController(config, db, tableNames);
 
+    const logWebhook = (req: any) => {
+        db.insert('npwebhooks', {
+            id: 'wb-' + Date.now(),
+            payload: {
+                url: req.originalUrl,
+                data: req.body,
+                headers: req.headers
+            }
+        })
+    }
+
     subApp.use((req: Request, res: Response, next: NextFunction) => {
         let _client = withClientConfigOverrides(config, req);
         const theme = _client.theme || {} as NPConfigTheme;
@@ -106,6 +118,7 @@ export function createPaymentMiddleware(
         pc.callback(req, res);
     });
     subApp.all(['/api/webhook', '/api/webhook/*'], authenticationMiddleware, (req, res) => {
+        logWebhook(req)
         pc.webhook(req, res);
     });
     subApp.all('/api/status', authenticationMiddleware, (req, res) => {
