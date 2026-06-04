@@ -557,8 +557,11 @@ export class PaymentController {
                 const sub = subById as NPSubscription;
                 if (sub) {
                     isSubscription = true;
-                    const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
-                    const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+                    const [plan, user] = await Promise.all([
+                        this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
+                        this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                    ]) as [NPPlan, NPUser]
+
                     objForUpdate = {
                         id: sub.id,
                         orderId: sub.id,
