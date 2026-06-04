@@ -573,7 +573,8 @@ export class PaymentController {
                         phone: user?.phone || '',
                         amount: plan?.amount || 0,
                         pname: plan?.name || 'Subscription',
-                        extra: '',
+                        extra: JSON.stringify(req.body),
+                        state: sub.state,
                         clientId: sub.clientId,
                         returnUrl: sub.returnUrl || '',
                         webhookUrl: sub.webhookUrl || ''
