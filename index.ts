@@ -77,8 +77,10 @@ export function createPaymentMiddleware(
     const sc = new SubscriptionController(config, db, tableNames);
 
     const logWebhook = (req: any) => {
+        let serviceUsed = pc.getServiceUsed(req, config)
         db.insert('npwebhooks', {
-            id: 'wb-' + Date.now(),
+            id: `${serviceUsed?.toLocaleLowerCase() || 'webhook'}-` + Date.now(),
+            created: Date.now(),
             payload: {
                 url: req.originalUrl,
                 data: req.body,
