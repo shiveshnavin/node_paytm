@@ -544,12 +544,17 @@ export class PaymentController {
         let objForUpdate: NPTransaction | null = null;
         let isSubscription = false;
         try {
-            objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null) as NPTransaction | null;
-            if (!objForUpdate) objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, { id: orderToFind }).catch(() => null) as NPTransaction | null;
-            if (!objForUpdate) objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, { ORDERID: orderToFind }).catch(() => null) as NPTransaction | null;
+            const [byQuery, byId, byOrderId, subById] = await Promise.all([
+                this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null),
+                this.db.getOne(this.tableNames.TRANSACTION, { id: orderToFind }).catch(() => null),
+                this.db.getOne(this.tableNames.TRANSACTION, { ORDERID: orderToFind }).catch(() => null),
+                this.db.getOne(this.tableNames.SUBSCRIPTION, { id: orderToFind }).catch(() => null),
+            ]);
+
+            objForUpdate = (byQuery ?? byId ?? byOrderId) as NPTransaction | null;
 
             if (!objForUpdate) {
-                const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id: orderToFind }).catch(() => null) as NPSubscription;
+                const sub = subById as NPSubscription;
                 if (sub) {
                     isSubscription = true;
                     const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
