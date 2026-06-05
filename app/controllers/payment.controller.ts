@@ -557,6 +557,8 @@ export class PaymentController {
                 const sub = subById as NPSubscription;
                 if (sub) {
                     isSubscription = true;
+                    console.log('Order', orderToFind, 'is not found in transactions table but found in subscriptions.')
+
                     const [plan, user] = await Promise.all([
                         this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
                         this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
@@ -579,6 +581,7 @@ export class PaymentController {
                         returnUrl: sub.returnUrl || '',
                         webhookUrl: sub.webhookUrl || ''
                     };
+
                 }
             }
         } catch {
@@ -655,6 +658,7 @@ export class PaymentController {
                 await this.db.update(this.tableNames.SUBSCRIPTION, { id: orderToFind }, { status: 'AUTHENTICATED', updatedAt: Date.now() });
                 // Also persist a transaction record so status/history APIs find it
                 const existingTxn = await this.db.getOne(this.tableNames.TRANSACTION, { orderId: orderToFind }).catch(() => null);
+                console.log('Saving a copy of subscription to transactions table', objForUpdate)
                 if (!existingTxn) {
                     await this.db.insert(this.tableNames.TRANSACTION, objForUpdate);
                 } else {
@@ -746,6 +750,7 @@ export class PaymentController {
         if (!objForUpdate && req.body.razorpay_subscription_id) {
             const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { gateway_subscription_id: req.body.razorpay_subscription_id }) as NPSubscription;
             if (sub) {
+                console.log('Found matching subscription', sub)
                 isSubscriptionCallback = true;
                 const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
                 const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;

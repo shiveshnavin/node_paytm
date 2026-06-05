@@ -89,6 +89,11 @@ export async function handleSubscriptionWebhook(
                 const existingAuth = await db.getOne(tableNames.TRANSACTION, { orderId: sub.id }).catch(() => null);
                 if (!existingAuth) {
                     await db.insert(tableNames.TRANSACTION, authTxn);
+                } else {
+                    await db.update(tableNames.TRANSACTION, { orderId: sub.id }, {
+                        ...existingAuth,
+                        ...authTxn
+                    });
                 }
 
                 if (sub.webhookUrl) {
@@ -135,9 +140,12 @@ export async function handleSubscriptionWebhook(
             sub.status = 'ACTIVE';
             await db.update(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
 
-            const plan = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
-            const user = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
-
+            const [plan, user] = await Promise.all(
+                [
+                    db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null),
+                    db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null)
+                ]
+            ) as [NPPlan, NPUser];
             // Create a new transaction record for this specific charge
             const txnId = paymentEntity.order_id || ('order_' + makeid(10));
             const newTxn: NPTransaction = {
@@ -173,8 +181,13 @@ export async function handleSubscriptionWebhook(
                 }
             }
         } else if (event === "subscription.halted") {
-            const plan = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
-            const user = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+            const [plan, user] = await Promise.all(
+                [
+                    db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null),
+                    db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null)
+                ]
+            ) as [NPPlan, NPUser];
+
             // Optional: Inform client of a failed recurring payment that led to a halt
             const txnId = 'txn_' + makeid(10);
             const newTxn: NPTransaction = {
