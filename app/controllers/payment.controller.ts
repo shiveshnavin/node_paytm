@@ -752,8 +752,13 @@ export class PaymentController {
             if (sub) {
                 console.log('Found matching subscription', sub)
                 isSubscriptionCallback = true;
-                const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
-                const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+                const [plan, user] = await Promise.all(
+                    [
+                        this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
+                        this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                    ]
+                ) as [NPPlan, NPUser];
+
                 // Create a virtual transaction object for the callback processor
                 objForUpdate = {
                     id: sub.id,

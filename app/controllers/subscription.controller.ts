@@ -312,8 +312,13 @@ export class SubscriptionController {
                 return;
             }
 
-            const plan = await this.db.getOne(this.tableNames.PLAN, { id: sub.planId }) as NPPlan;
-            const user = await this.db.getOne(this.tableNames.USER, { id: sub.cusId }) as NPUser;
+            const [plan, user] = await Promise.all(
+                [
+                    this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
+                    this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                ]
+            ) as [NPPlan, NPUser];
+
 
             const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
 
