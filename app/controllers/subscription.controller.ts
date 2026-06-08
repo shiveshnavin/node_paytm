@@ -226,7 +226,7 @@ export class SubscriptionController {
 
     async initSubscription(req: Request, res: Response): Promise<void> {
         try {
-            const { planId, returnUrl, webhookUrl, NAME, EMAIL, MOBILE_NO, CLIENT_ID } = req.body;
+            const { planId, returnUrl, webhookUrl, NAME, EMAIL, MOBILE_NO, CLIENT_ID, PRODUCT_NAME } = req.body;
 
             if (!planId || !NAME || !EMAIL) {
                 res.status(400).send({ message: 'Missing required fields: planId, NAME, EMAIL' });
@@ -262,7 +262,7 @@ export class SubscriptionController {
                 extra: (req.body.EXTRA || ''),
                 state: req.body.STATE || '',
                 createdAt: Date.now(),
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
             };
 
             // Call Gateway
@@ -282,7 +282,7 @@ export class SubscriptionController {
                 ...subData,
                 orderId: subData.id,
                 payurl: config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id,
-                pname: plan.name,
+                pname: PRODUCT_NAME || plan.name,
                 amount: plan.amount,
                 name: user.name,
                 email: user.email,
