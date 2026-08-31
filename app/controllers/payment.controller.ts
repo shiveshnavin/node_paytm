@@ -143,7 +143,6 @@ export class PaymentController {
             pname: "stringsmall",        // product/plan name
             extra: "stringlarge",        // already correct — free-form payload
             txnId: "stringsmall",        // gateway transaction ID (camelCase)
-            TXNID: "stringsmall",        // gateway transaction ID (legacy alias)
             returnUrl: "stringlarge",    // URLs can exceed 255 chars with query params — safer as TEXT
             webhookUrl: "stringlarge",   // webhook URL
             state: "stringsmall",        // custom state/context
@@ -1229,6 +1228,7 @@ export class PaymentController {
             const onStatusUpdate = async (paytmResponse: any) => {
                 if (paytmResponse.TXNID && paytmResponse.TXNID.length > 4) {
                     orderData.status = paytmResponse.STATUS;
+                    orderData.txnId = paytmResponse.TXNID;
                     orderData.extra = JSON.stringify(paytmResponse);
 
                     try {
