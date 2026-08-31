@@ -129,7 +129,8 @@ export class PaymentController {
             : path.join(__dirname, '..', 'views');
         this.viewPath = viewRoot.endsWith(path.sep) ? viewRoot : viewRoot + path.sep
 
-        const sample = {
+        const sample: NPTransaction = {
+            id: "stringsmall",           // unique ID
             orderId: "stringsmall",      // order/transaction ID — fits in 255 chars
             cusId: "stringsmall",        // customer ID
             time: 1770051201752,
@@ -141,8 +142,15 @@ export class PaymentController {
             amount: 1,
             pname: "stringsmall",        // product/plan name
             extra: "stringlarge",        // already correct — free-form payload
-            TXNID: "stringsmall",        // gateway transaction ID
-            returnUrl: "stringlarge"     // URLs can exceed 255 chars with query params — safer as TEXT
+            txnId: "stringsmall",        // gateway transaction ID (camelCase)
+            TXNID: "stringsmall",        // gateway transaction ID (legacy alias)
+            returnUrl: "stringlarge",    // URLs can exceed 255 chars with query params — safer as TEXT
+            webhookUrl: "stringlarge",   // webhook URL
+            state: "stringsmall",        // custom state/context
+            clientId: "stringsmall",     // multi-tenant client ID
+            readonly: "stringsmall",
+            isSubscription: false,
+            subscriptionId: "stringsmall"
         };
         this.db.create(this.tableNames.TRANSACTION, sample).catch(() => { });
 

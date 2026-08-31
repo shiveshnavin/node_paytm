@@ -20,6 +20,7 @@ export interface NPTransaction {
     orderId: string,
     cusId: string,
     time: Number,
+    timeStamp?: Number,
     status: string,
     name: string,
     email: string,
@@ -30,6 +31,7 @@ export interface NPTransaction {
     state?: string
     readonly?: string,
     txnId?: string,
+    TXNID?: string,
     clientId: string,
     returnUrl: string
     webhookUrl: string
@@ -139,7 +141,8 @@ export type NPTableNames = {
     USER: string,
     TRANSACTION: string,
     PLAN: string,
-    SUBSCRIPTION: string
+    SUBSCRIPTION: string,
+    WEBHOOK?: string
 }
 
 export type NPParam = {

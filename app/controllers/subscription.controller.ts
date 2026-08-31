@@ -34,8 +34,12 @@ export class SubscriptionController {
             currency: 'stringsmall',
             period: 'stringsmall' as any,
             interval: 1,
+            trial_days: 0,
+            gateway_plan_id: 'stringsmall',
             clientId: 'stringsmall',
-            gateway_plan_id: 'stringsmall'
+            is_deleted: false,
+            createdAt: 1770051201752,
+            updatedAt: 1770051201752
         };
 
         const subSample: NPSubscription = {
@@ -43,10 +47,17 @@ export class SubscriptionController {
             planId: 'stringsmall',
             cusId: 'stringsmall',
             status: 'stringsmall',
+            gateway_subscription_id: 'stringsmall',
+            short_url: 'stringlarge',
             clientId: 'stringsmall',
+            returnUrl: 'stringlarge',
+            webhookUrl: 'stringlarge',
+            createdAt: 1770051201752,
+            updatedAt: 1770051201752,
+            expire_by: 1770051201752,
+            start_at: 1770051201752,
             extra: 'stringlarge',
-            state: 'stringsmall',
-            gateway_subscription_id: 'stringsmall'
+            state: 'stringsmall'
         };
         this.db.create(this.tableNames.PLAN, planSample).catch(() => { });
         this.db.create(this.tableNames.SUBSCRIPTION, subSample).catch(() => { });
