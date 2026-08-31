@@ -19,7 +19,7 @@ export class RazorpayAdapter implements ISubscriptionProvider {
 
         const payload = {
             period: plan.period,
-            interval: plan.interval,
+            interval: plan.plan_interval,
             item: {
                 name: plan.name,
                 description: plan.description || plan.name,

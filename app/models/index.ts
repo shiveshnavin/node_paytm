@@ -46,7 +46,7 @@ export interface NPPlan {
     amount: number;
     currency: string;
     period: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    interval: number;
+    plan_interval: number;
     trial_days?: number;
     gateway_plan_id?: string;
     clientId: string;

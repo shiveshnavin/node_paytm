@@ -33,7 +33,7 @@ export class SubscriptionController {
             amount: 100,
             currency: 'stringsmall',
             period: 'stringsmall' as any,
-            interval: 1,
+            plan_interval: 1,
             trial_days: 0,
             gateway_plan_id: 'stringsmall',
             clientId: 'stringsmall',
@@ -83,10 +83,10 @@ export class SubscriptionController {
                 return;
             }
 
-            const { id, name, description, amount, currency, period, interval, trial_days, clientId } = req.body;
+            const { id, name, description, amount, currency, period, plan_interval, trial_days, clientId } = req.body;
 
-            if (!id || !name || !amount || !period || !interval) {
-                res.status(400).send({ message: 'Missing required fields: id, name, amount, period, interval' });
+            if (!id || !name || !amount || !period || !plan_interval) {
+                res.status(400).send({ message: 'Missing required fields: id, name, amount, period, plan_interval' });
                 return;
             }
 
@@ -97,9 +97,11 @@ export class SubscriptionController {
                 return;
             }
 
+            const parsedInterval = parseInt(plan_interval, 10);
             const planData: NPPlan = {
                 id, name, description, amount: parseFloat(amount),
-                currency: currency || 'INR', period, interval: parseInt(interval, 10),
+                currency: currency || 'INR', period,
+                plan_interval: parsedInterval,
                 trial_days: trial_days ? parseInt(trial_days, 10) : 0,
                 clientId: clientId || req.query.client_id || '',
                 createdAt: Date.now(), updatedAt: Date.now(), is_deleted: false
@@ -171,13 +173,13 @@ export class SubscriptionController {
                 return;
             }
 
-            const { name, description, amount, interval, period, currency, trial_days } = req.body;
+            const { name, description, amount, plan_interval, period, currency, trial_days } = req.body;
 
             // Check if Gateway immutable fields are changing
             let needsNewGatewayPlan = false;
             if (
                 (amount !== undefined && parseFloat(amount) !== plan.amount) ||
-                (interval !== undefined && parseInt(interval, 10) !== plan.interval) ||
+                (plan_interval !== undefined && parseInt(plan_interval, 10) !== plan.plan_interval) ||
                 (period !== undefined && period !== plan.period) ||
                 (currency !== undefined && currency !== plan.currency) ||
                 (trial_days !== undefined && parseInt(trial_days, 10) !== plan.trial_days)
@@ -189,7 +191,7 @@ export class SubscriptionController {
             if (name !== undefined) updatedPlan.name = name;
             if (description !== undefined) updatedPlan.description = description;
             if (amount !== undefined) updatedPlan.amount = parseFloat(amount);
-            if (interval !== undefined) updatedPlan.interval = parseInt(interval, 10);
+            if (plan_interval !== undefined) updatedPlan.plan_interval = parseInt(plan_interval, 10);
             if (period !== undefined) updatedPlan.period = period;
             if (currency !== undefined) updatedPlan.currency = currency;
             if (trial_days !== undefined) updatedPlan.trial_days = parseInt(trial_days, 10);
