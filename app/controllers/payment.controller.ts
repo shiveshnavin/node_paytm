@@ -130,20 +130,20 @@ export class PaymentController {
         this.viewPath = viewRoot.endsWith(path.sep) ? viewRoot : viewRoot + path.sep
 
         const sample = {
-            orderId: "string",
-            cusId: "string",
+            orderId: "stringsmall",      // order/transaction ID — fits in 255 chars
+            cusId: "stringsmall",        // customer ID
             time: 1770051201752,
             timeStamp: 1770051201752,
-            status: "string",
-            name: "string",
-            email: "string",
-            phone: "12345678",
+            status: "stringsmall",       // short enum e.g. TXN_SUCCESS
+            name: "stringsmall",         // customer name
+            email: "stringsmall",
+            phone: "stringsmall",
             amount: 1,
-            pname: "string",
-            extra: "stringlarge",
-            TXNID: "27118670199",
-            returnUrl: "string"
-        }
+            pname: "stringsmall",        // product/plan name
+            extra: "stringlarge",        // already correct — free-form payload
+            TXNID: "stringsmall",        // gateway transaction ID
+            returnUrl: "stringlarge"     // URLs can exceed 255 chars with query params — safer as TEXT
+        };
         this.db.create(this.tableNames.TRANSACTION, sample).catch(() => { });
 
     }

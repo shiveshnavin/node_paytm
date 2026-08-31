@@ -13,11 +13,12 @@ export class NPUserController {
 
     async init() {
         const sample: NPUser = {
-            id: "user_aB3dE9xY1Z",
-            name: "tset",
-            email: "testgmailcom",
-            phone: "12345678",
+            id: "stringsmall",
+            name: "stringsmall",
+            email: "stringsmall",
+            phone: "stringsmall",
         };
+
         this.db.create(this.tableName, sample);
     }
 

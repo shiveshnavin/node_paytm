@@ -27,25 +27,26 @@ export class SubscriptionController {
 
     private configure() {
         const planSample: NPPlan = {
-            id: 'plan_sample',
-            name: 'Sample Plan',
-            description: 'Sample Plan',
+            id: 'stringsmall',
+            name: 'stringsmall',
+            description: 'stringlarge',
             amount: 100,
-            currency: 'INR',
-            period: 'monthly',
+            currency: 'stringsmall',
+            period: 'stringsmall' as any,
             interval: 1,
-            clientId: 'client_1',
-            gateway_plan_id: 'gw_plan_sample'
+            clientId: 'stringsmall',
+            gateway_plan_id: 'stringsmall'
         };
+
         const subSample: NPSubscription = {
-            id: 'sub_sample',
-            planId: 'plan_sample',
-            cusId: 'user_sample',
-            status: 'CREATED',
-            clientId: 'client_1',
-            extra: '',
-            state: '',
-            gateway_subscription_id: 'gw_sub_sample'
+            id: 'stringsmall',
+            planId: 'stringsmall',
+            cusId: 'stringsmall',
+            status: 'stringsmall',
+            clientId: 'stringsmall',
+            extra: 'stringlarge',
+            state: 'stringsmall',
+            gateway_subscription_id: 'stringsmall'
         };
         this.db.create(this.tableNames.PLAN, planSample).catch(() => { });
         this.db.create(this.tableNames.SUBSCRIPTION, subSample).catch(() => { });
