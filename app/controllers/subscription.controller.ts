@@ -33,29 +33,29 @@ export class SubscriptionController {
             amount: 100,
             currency: 'stringsmall',
             period: 'stringsmall' as any,
-            plan_interval: 1,
-            trial_days: 0,
-            gateway_plan_id: 'stringsmall',
-            clientId: 'stringsmall',
-            is_deleted: false,
-            createdAt: 1770051201752,
-            updatedAt: 1770051201752
+            planinterval: 1,
+            trialdays: 0,
+            gatewayplanid: 'stringsmall',
+            clientid: 'stringsmall',
+            isdeleted: false,
+            createdat: 1770051201752,
+            updatedat: 1770051201752
         };
 
         const subSample: NPSubscription = {
             id: 'stringsmall',
-            planId: 'stringsmall',
-            cusId: 'stringsmall',
+            planid: 'stringsmall',
+            cusid: 'stringsmall',
             status: 'stringsmall',
-            gateway_subscription_id: 'stringsmall',
-            short_url: 'stringlarge',
-            clientId: 'stringsmall',
-            returnUrl: 'stringlarge',
-            webhookUrl: 'stringlarge',
-            createdAt: 1770051201752,
-            updatedAt: 1770051201752,
-            expire_by: 1770051201752,
-            start_at: 1770051201752,
+            gatewaysubscriptionid: 'stringsmall',
+            shorturl: 'stringlarge',
+            clientid: 'stringsmall',
+            returnurl: 'stringlarge',
+            webhookurl: 'stringlarge',
+            createdat: 1770051201752,
+            updatedat: 1770051201752,
+            expireby: 1770051201752,
+            startat: 1770051201752,
             extra: 'stringlarge',
             state: 'stringsmall'
         };
@@ -83,10 +83,13 @@ export class SubscriptionController {
                 return;
             }
 
-            const { id, name, description, amount, currency, period, plan_interval, trial_days, clientId } = req.body;
+            const rawInterval = req.body.planinterval ?? req.body.plan_interval ?? req.body.interval;
+            const rawTrialDays = req.body.trialdays ?? req.body.trial_days;
+            const rawClientId = req.body.clientid ?? req.body.clientId ?? req.query.client_id ?? req.query.clientId ?? '';
+            const { id, name, description, amount, currency, period } = req.body;
 
-            if (!id || !name || !amount || !period || !plan_interval) {
-                res.status(400).send({ message: 'Missing required fields: id, name, amount, period, plan_interval' });
+            if (!id || !name || !amount || !period || !rawInterval) {
+                res.status(400).send({ message: 'Missing required fields: id, name, amount, period, planinterval' });
                 return;
             }
 
@@ -97,20 +100,26 @@ export class SubscriptionController {
                 return;
             }
 
-            const parsedInterval = parseInt(plan_interval, 10);
+            const parsedInterval = parseInt(rawInterval, 10);
             const planData: NPPlan = {
-                id, name, description, amount: parseFloat(amount),
-                currency: currency || 'INR', period,
-                plan_interval: parsedInterval,
-                trial_days: trial_days ? parseInt(trial_days, 10) : 0,
-                clientId: clientId || req.query.client_id || '',
-                createdAt: Date.now(), updatedAt: Date.now(), is_deleted: false
+                id,
+                name,
+                description,
+                amount: parseFloat(amount),
+                currency: currency || 'INR',
+                period,
+                planinterval: parsedInterval,
+                trialdays: rawTrialDays ? parseInt(rawTrialDays, 10) : 0,
+                clientid: rawClientId,
+                createdat: Date.now(),
+                updatedat: Date.now(),
+                isdeleted: false
             };
 
             // Register plan with Gateway
             try {
                 const gatewayPlanId = await provider.createPlan(planData, config);
-                planData.gateway_plan_id = gatewayPlanId;
+                planData.gatewayplanid = gatewayPlanId;
             } catch (gwErr: any) {
                 console.error("Gateway Create Plan Error:", gwErr);
                 res.status(500).send({ message: 'Failed to create plan on Gateway', error: gwErr?.message || gwErr });
@@ -129,17 +138,17 @@ export class SubscriptionController {
 
     async getPlans(req: Request, res: Response): Promise<void> {
         try {
-            const clientId = req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
-            const query: any = { is_deleted: false };
+            const clientId = req.query.clientid || req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
+            const query: any = { isdeleted: false };
             if (clientId) {
-                query.clientId = clientId;
+                query.clientid = clientId;
             }
 
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
 
             const plans = await this.db.get(this.tableNames.PLAN, query, {
-                sort: [{ field: 'createdAt', order: 'desc' }],
+                sort: [{ field: 'createdat', order: 'desc' }],
                 limit: limit, offset: offset
             });
 
@@ -152,7 +161,7 @@ export class SubscriptionController {
     async getPlan(req: Request, res: Response): Promise<void> {
         try {
             const id = req.params.id;
-            const plan = await this.db.getOne(this.tableNames.PLAN, { id, is_deleted: false });
+            const plan = await this.db.getOne(this.tableNames.PLAN, { id, isdeleted: false });
             if (!plan) {
                 res.status(404).send({ message: 'Plan not found' });
                 return;
@@ -166,35 +175,37 @@ export class SubscriptionController {
     async updatePlan(req: Request, res: Response): Promise<void> {
         try {
             const id = req.params.id;
-            const plan = await this.db.getOne(this.tableNames.PLAN, { id, is_deleted: false }) as NPPlan;
+            const plan = await this.db.getOne(this.tableNames.PLAN, { id, isdeleted: false }) as NPPlan;
 
             if (!plan) {
                 res.status(404).send({ message: 'Plan not found' });
                 return;
             }
 
-            const { name, description, amount, plan_interval, period, currency, trial_days } = req.body;
+            const rawInterval = req.body.planinterval ?? req.body.plan_interval ?? req.body.interval;
+            const rawTrialDays = req.body.trialdays ?? req.body.trial_days;
+            const { name, description, amount, period, currency } = req.body;
 
             // Check if Gateway immutable fields are changing
             let needsNewGatewayPlan = false;
             if (
                 (amount !== undefined && parseFloat(amount) !== plan.amount) ||
-                (plan_interval !== undefined && parseInt(plan_interval, 10) !== plan.plan_interval) ||
+                (rawInterval !== undefined && parseInt(rawInterval, 10) !== plan.planinterval) ||
                 (period !== undefined && period !== plan.period) ||
                 (currency !== undefined && currency !== plan.currency) ||
-                (trial_days !== undefined && parseInt(trial_days, 10) !== plan.trial_days)
+                (rawTrialDays !== undefined && parseInt(rawTrialDays, 10) !== plan.trialdays)
             ) {
                 needsNewGatewayPlan = true;
             }
 
-            const updatedPlan: NPPlan = { ...plan, updatedAt: Date.now() };
+            const updatedPlan: NPPlan = { ...plan, updatedat: Date.now() };
             if (name !== undefined) updatedPlan.name = name;
             if (description !== undefined) updatedPlan.description = description;
             if (amount !== undefined) updatedPlan.amount = parseFloat(amount);
-            if (plan_interval !== undefined) updatedPlan.plan_interval = parseInt(plan_interval, 10);
+            if (rawInterval !== undefined) updatedPlan.planinterval = parseInt(rawInterval, 10);
             if (period !== undefined) updatedPlan.period = period;
             if (currency !== undefined) updatedPlan.currency = currency;
-            if (trial_days !== undefined) updatedPlan.trial_days = parseInt(trial_days, 10);
+            if (rawTrialDays !== undefined) updatedPlan.trialdays = parseInt(rawTrialDays, 10);
 
             if (needsNewGatewayPlan) {
                 const config = withClientConfigOverrides(this.baseConfig, req);
@@ -202,7 +213,7 @@ export class SubscriptionController {
                 if (provider) {
                     try {
                         const newGatewayId = await provider.createPlan(updatedPlan, config);
-                        updatedPlan.gateway_plan_id = newGatewayId;
+                        updatedPlan.gatewayplanid = newGatewayId;
                     } catch (gwErr: any) {
                         res.status(500).send({ message: 'Failed to create updated plan on Gateway', error: gwErr?.message });
                         return;
@@ -228,7 +239,7 @@ export class SubscriptionController {
             }
 
             // Soft delete
-            await this.db.update(this.tableNames.PLAN, { id }, { ...plan, is_deleted: true, updatedAt: Date.now() });
+            await this.db.update(this.tableNames.PLAN, { id }, { ...plan, isdeleted: true, updatedat: Date.now() });
             res.send({ message: 'Plan deleted successfully', id });
         } catch (err: any) {
             res.status(500).send({ message: 'Error deleting plan', error: err?.message });
@@ -240,15 +251,19 @@ export class SubscriptionController {
 
     async initSubscription(req: Request, res: Response): Promise<void> {
         try {
-            const { planId, returnUrl, webhookUrl, NAME, EMAIL, MOBILE_NO, CLIENT_ID, PRODUCT_NAME } = req.body;
+            const rawPlanId = req.body.planid ?? req.body.planId;
+            const rawReturnUrl = req.body.returnurl ?? req.body.returnUrl;
+            const rawWebhookUrl = req.body.webhookurl ?? req.body.webhookUrl;
+            const rawClientId = req.body.clientid ?? req.body.clientId ?? req.body.CLIENT_ID ?? req.query.client_id ?? req.query.clientId ?? '';
+            const { NAME, EMAIL, MOBILE_NO, PRODUCT_NAME } = req.body;
 
-            if (!planId || !NAME || !EMAIL) {
-                res.status(400).send({ message: 'Missing required fields: planId, NAME, EMAIL' });
+            if (!rawPlanId || !NAME || !EMAIL) {
+                res.status(400).send({ message: 'Missing required fields: planid, NAME, EMAIL' });
                 return;
             }
 
-            const plan = await this.db.getOne(this.tableNames.PLAN, { id: planId, is_deleted: false }) as NPPlan;
-            if (!plan || !plan.gateway_plan_id) {
+            const plan = await this.db.getOne(this.tableNames.PLAN, { id: rawPlanId, isdeleted: false }) as NPPlan;
+            if (!plan || !plan.gatewayplanid) {
                 res.status(404).send({ message: 'Active plan not found or not synced with gateway.' });
                 return;
             }
@@ -267,23 +282,23 @@ export class SubscriptionController {
             const subId = 'sub_' + Utils.makeid(14);
             const subData: NPSubscription = {
                 id: subId,
-                planId: plan.id,
-                cusId: user.id,
+                planid: plan.id,
+                cusid: user.id,
                 status: 'CREATED',
-                clientId: CLIENT_ID || req.query.client_id || '',
-                returnUrl: returnUrl || '',
-                webhookUrl: webhookUrl || '',
+                clientid: rawClientId,
+                returnurl: rawReturnUrl || '',
+                webhookurl: rawWebhookUrl || '',
                 extra: (req.body.EXTRA || ''),
                 state: req.body.STATE || '',
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
+                createdat: Date.now(),
+                updatedat: Date.now(),
             };
 
             // Call Gateway
             try {
                 const { id: gateway_sub_id, url: short_url } = await provider.createSubscription(subData, plan, config);
-                subData.gateway_subscription_id = gateway_sub_id;
-                subData.short_url = short_url;
+                subData.gatewaysubscriptionid = gateway_sub_id;
+                subData.shorturl = short_url;
             } catch (gwErr: any) {
                 console.error("Gateway Sub Error:", gwErr);
                 res.status(500).send({ message: 'Failed to initialize subscription on gateway', error: gwErr?.message });
@@ -294,6 +309,7 @@ export class SubscriptionController {
 
             const responseData = {
                 ...subData,
+                orderid: subData.id,
                 orderId: subData.id,
                 payurl: config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id,
                 pname: PRODUCT_NAME || plan.name,
@@ -305,7 +321,7 @@ export class SubscriptionController {
 
             if (req.headers.accept?.includes('application/json') || req.path.includes('/createTxn')) {
                 res.status(201).send(responseData);
-            } else if (subData.short_url) {
+            } else if (subData.shorturl) {
                 res.redirect(config.host_url + '/' + config.path_prefix + '/sub/checkout/' + subData.id);
             } else {
                 res.status(201).send(responseData); // fallback
@@ -321,23 +337,23 @@ export class SubscriptionController {
         try {
             const id = req.params.id;
             const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { id }) as NPSubscription;
-            if (!sub || !sub.gateway_subscription_id) {
+            if (!sub || !sub.gatewaysubscriptionid) {
                 res.status(404).send({ message: 'Subscription not found or not ready.' });
                 return;
             }
 
             const [plan, user] = await Promise.all(
                 [
-                    this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
-                    this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                    this.db.getOne(this.tableNames.PLAN, { id: sub.planid }).catch(() => null),
+                    this.db.getOne(this.tableNames.USER, { id: sub.cusid }).catch(() => null)
                 ]
             ) as [NPPlan, NPUser];
 
 
-            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientid } as any);
 
             const params = {
-                ORDER_ID: sub.gateway_subscription_id,
+                ORDER_ID: sub.gatewaysubscriptionid,
                 CALLBACK_URL: config.host_url + '/' + config.path_prefix + '/callback',
                 NAME: user?.name || '',
                 EMAIL: user?.email || '',
@@ -362,12 +378,12 @@ export class SubscriptionController {
             }
 
             // Optionally sync from provider
-            if (req.query.sync && sub.gateway_subscription_id) {
-                const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+            if (req.query.sync && sub.gatewaysubscriptionid) {
+                const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientid } as any);
                 const provider = this.getProvider(config);
                 if (provider) {
                     try {
-                        const gwData = await provider.getSubscription(sub.gateway_subscription_id, config);
+                        const gwData = await provider.getSubscription(sub.gatewaysubscriptionid, config);
                         let newStatus = sub.status;
 
                         if (gwData.status === 'active') newStatus = 'ACTIVE';
@@ -379,7 +395,7 @@ export class SubscriptionController {
 
                         if (newStatus !== sub.status) {
                             sub.status = newStatus;
-                            sub.updatedAt = Date.now();
+                            sub.updatedat = Date.now();
                             await this.db.update(this.tableNames.SUBSCRIPTION, { id }, sub);
                         }
                     } catch (gwErr) {
@@ -396,23 +412,23 @@ export class SubscriptionController {
 
     async getSubscriptions(req: Request, res: Response): Promise<void> {
         try {
-            const clientId = req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
-            const userId = req.query.userId || req.query.user_id || req.query.cusId;
-            const userEmail = req.query.userEmail || req.query.user_email || req.query.email;
+            const clientId = req.query.clientid || req.query.clientId || req.query.client_id || req.headers['x-client-id'] || '';
+            const userId = req.query.cusid || req.query.cusId || req.query.userId || req.query.user_id;
+            const userEmail = req.query.email || req.query.userEmail || req.query.user_email;
 
             const query: any = {};
             if (clientId) {
-                query.clientId = clientId;
+                query.clientid = clientId;
             }
 
             if (userId) {
-                query.cusId = userId;
+                query.cusid = userId;
             }
 
             if (userEmail) {
                 const user = await this.db.getOne(this.tableNames.USER, { email: userEmail }).catch(() => null) as NPUser;
                 if (user) {
-                    query.cusId = user.id;
+                    query.cusid = user.id;
                 } else {
                     res.send({ limit: 20, offset: 0, count: 0, subscriptions: [] });
                     return;
@@ -423,7 +439,7 @@ export class SubscriptionController {
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
 
             const subs = await this.db.get(this.tableNames.SUBSCRIPTION, query, {
-                sort: [{ field: 'createdAt', order: 'desc' }],
+                sort: [{ field: 'createdat', order: 'desc' }],
                 limit: limit, offset: offset
             });
 
@@ -449,16 +465,16 @@ export class SubscriptionController {
                 return;
             }
 
-            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientid } as any);
             const provider = this.getProvider(config);
 
-            if (provider && sub.gateway_subscription_id) {
+            if (provider && sub.gatewaysubscriptionid) {
                 try {
-                    await provider.cancelSubscription(sub.gateway_subscription_id, cancelAtCycleEnd, config);
+                    await provider.cancelSubscription(sub.gatewaysubscriptionid, cancelAtCycleEnd, config);
                     if (!cancelAtCycleEnd) {
                         sub.status = 'CANCELLED';
                     }
-                    sub.updatedAt = Date.now();
+                    sub.updatedat = Date.now();
                     await this.db.update(this.tableNames.SUBSCRIPTION, { id }, sub);
 
                     res.send({ message: 'Cancellation processed successfully', status: sub.status });
@@ -483,13 +499,13 @@ export class SubscriptionController {
                 return;
             }
 
-            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientId } as any);
+            const config = withClientConfigOverrides(this.baseConfig, req, { clientId: sub.clientid } as any);
 
             const limit = Math.min(parseInt((req.query.limit as string), 10) || 20, 100);
             const offset = Math.max(parseInt((req.query.offset as string), 10) || 0, 0);
 
             // Fetch transactions linked to this subscription
-            const payments = await this.db.get(this.tableNames.TRANSACTION, { subscriptionId: id }, {
+            const payments = await this.db.get(this.tableNames.TRANSACTION, { subscriptionid: id }, {
                 sort: [{ field: 'time', order: 'desc' }],
                 limit: limit, offset: offset
             });

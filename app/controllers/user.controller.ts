@@ -17,7 +17,7 @@ export class NPUserController {
             name: "stringsmall",
             email: "stringsmall",
             phone: "stringsmall",
-            createdAt: 1770051201752
+            createdat: 1770051201752
         };
 
         this.db.create(this.tableName, sample);
@@ -45,8 +45,8 @@ export class NPUserController {
 
             } else {
                 userData.id = "user_" + Utils.makeid();
-                if (!userData.createdAt) {
-                    userData.createdAt = Date.now();
+                if (!userData.createdat) {
+                    userData.createdat = Date.now();
                 }
                 await this.db.insert(this.tableName, userData);
                 return userData;

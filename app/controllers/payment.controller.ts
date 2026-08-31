@@ -131,10 +131,10 @@ export class PaymentController {
 
         const sample: NPTransaction = {
             id: "stringsmall",           // unique ID
-            orderId: "stringsmall",      // order/transaction ID — fits in 255 chars
-            cusId: "stringsmall",        // customer ID
+            orderid: "stringsmall",      // order/transaction ID — fits in 255 chars
+            cusid: "stringsmall",        // customer ID
             time: 1770051201752,
-            timeStamp: 1770051201752,
+            timestamp: 1770051201752,
             status: "stringsmall",       // short enum e.g. TXN_SUCCESS
             name: "stringsmall",         // customer name
             email: "stringsmall",
@@ -142,14 +142,14 @@ export class PaymentController {
             amount: 1,
             pname: "stringsmall",        // product/plan name
             extra: "stringlarge",        // already correct — free-form payload
-            txnId: "stringsmall",        // gateway transaction ID (camelCase)
-            returnUrl: "stringlarge",    // URLs can exceed 255 chars with query params — safer as TEXT
-            webhookUrl: "stringlarge",   // webhook URL
+            txnid: "stringsmall",        // gateway transaction ID
+            returnurl: "stringlarge",    // URLs can exceed 255 chars with query params — safer as TEXT
+            webhookurl: "stringlarge",   // webhook URL
             state: "stringsmall",        // custom state/context
-            clientId: "stringsmall",     // multi-tenant client ID
+            clientid: "stringsmall",     // multi-tenant client ID
             readonly: "stringsmall",
-            isSubscription: false,
-            subscriptionId: "stringsmall"
+            issubscription: false,
+            subscriptionid: "stringsmall"
         };
         this.db.create(this.tableNames.TRANSACTION, sample).catch(() => { });
 
@@ -337,7 +337,7 @@ export class PaymentController {
                     let pmttoken = await openMoneyInstance.generatePaymentToken(params);
                     openMoneyInstance.renderProcessingPage(params, pmttoken, res, LoadingSVG);
 
-                    var myquery = { orderId: params['ORDER_ID'] };
+                    var myquery = { orderid: params['ORDER_ID'] };
                     const objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery);
                     if (objForUpdate) {
                         objForUpdate.extra = JSON.stringify({
@@ -370,8 +370,8 @@ export class PaymentController {
                 params['WEBSITE'] = config.WEBSITE;
                 params['CHANNEL_ID'] = config.CHANNEL_ID;
                 params['INDUSTRY_TYPE_ID'] = config.INDUSTRY_TYPE_ID;
-                params['ORDER_ID'] = txnData.orderId;
-                params['CUST_ID'] = txnData.cusId;
+                params['ORDER_ID'] = txnData.orderid;
+                params['CUST_ID'] = txnData.cusid;
                 params['TXN_AMOUNT'] = JSON.stringify(txnData.amount);
                 params['CALLBACK_URL'] = config.host_url + '/' + config.path_prefix + '/callback'
                 params['EMAIL'] = txnData.email;
@@ -403,7 +403,7 @@ export class PaymentController {
                         CALLBACK_URL: params['CALLBACK_URL'],
                         STATE: params['STATE'],
                         CHECKSUMHASH: checksum,
-                        CLIENT_ID: params['CLIENT_ID'] || txnData.clientId || (config as any).client_id || ''
+                        CLIENT_ID: params['CLIENT_ID'] || txnData.clientid || (config as any).client_id || ''
                     });
                 }
 
@@ -423,12 +423,12 @@ export class PaymentController {
 
             const onOrder = async (orderId: string): Promise<void> => {
 
-                const txnTask = {
+                const txnTask: NPTransaction = {
                     id: orderId,
-                    orderId: orderId,
-                    cusId: user.id,
+                    orderid: orderId,
+                    cusid: user.id,
                     time: Date.now(),
-                    timeStamp: Date.now(),
+                    timestamp: Date.now(),
                     status: 'INITIATED',
                     name: user.name,
                     email: user.email,
@@ -436,10 +436,10 @@ export class PaymentController {
                     amount: req.body.TXN_AMOUNT,
                     pname: req.body.PRODUCT_NAME,
                     extra: '',
-                    returnUrl: req.body.RETURN_URL || '',
-                    webhookUrl: req.body.WEBHOOK_URL || '',
+                    returnurl: req.body.RETURN_URL || '',
+                    webhookurl: req.body.WEBHOOK_URL || '',
                     state: req.body.STATE || '',
-                    clientId: req.body.CLIENT_ID || ''
+                    clientid: req.body.CLIENT_ID || ''
                 };
 
                 try {
@@ -546,19 +546,18 @@ export class PaymentController {
         const callbacks = this.callbacks;
 
         const orderToFind = req.body.ORDERID || req.body.ORDER_ID || req.body.ORDERId || (req.query && req.query.order_id) || req.body.ORDER_ID;
-        const myquery = { orderId: orderToFind };
+        const myquery = { orderid: orderToFind };
 
         let objForUpdate: NPTransaction | null = null;
         let isSubscription = false;
         try {
-            const [byQuery, byId, byOrderId, subById] = await Promise.all([
+            const [byQuery, byId, subById] = await Promise.all([
                 this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null),
                 this.db.getOne(this.tableNames.TRANSACTION, { id: orderToFind }).catch(() => null),
-                this.db.getOne(this.tableNames.TRANSACTION, { ORDERID: orderToFind }).catch(() => null),
                 this.db.getOne(this.tableNames.SUBSCRIPTION, { id: orderToFind }).catch(() => null),
             ]);
 
-            objForUpdate = (byQuery ?? byId ?? byOrderId) as NPTransaction | null;
+            objForUpdate = (byQuery ?? byId) as NPTransaction | null;
 
             if (!objForUpdate) {
                 const sub = subById as NPSubscription;
@@ -567,15 +566,15 @@ export class PaymentController {
                     console.log('Order', orderToFind, 'is not found in transactions table but found in subscriptions.')
 
                     const [plan, user] = await Promise.all([
-                        this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
-                        this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                        this.db.getOne(this.tableNames.PLAN, { id: sub.planid }).catch(() => null),
+                        this.db.getOne(this.tableNames.USER, { id: sub.cusid }).catch(() => null)
                     ]) as [NPPlan, NPUser]
 
                     objForUpdate = {
                         id: sub.id,
-                        orderId: sub.id,
-                        cusId: sub.cusId,
-                        time: sub.createdAt || Date.now(),
+                        orderid: sub.id,
+                        cusid: sub.cusid,
+                        time: sub.createdat || Date.now(),
                         status: 'INITIATED',
                         name: user?.name || '',
                         email: user?.email || '',
@@ -584,9 +583,9 @@ export class PaymentController {
                         pname: plan?.name || 'Subscription',
                         extra: JSON.stringify(req.body),
                         state: sub.state,
-                        clientId: sub.clientId,
-                        returnUrl: sub.returnUrl || '',
-                        webhookUrl: sub.webhookUrl || ''
+                        clientid: sub.clientid,
+                        returnurl: sub.returnurl || '',
+                        webhookurl: sub.webhookurl || ''
                     };
 
                 }
@@ -595,8 +594,8 @@ export class PaymentController {
             objForUpdate = objForUpdate || null;
         }
 
-        let returnUrl = objForUpdate ? (objForUpdate.returnUrl as string | null) : null;
-        let webhookUrl = objForUpdate ? (objForUpdate.webhookUrl as string | null) : null;
+        let returnUrl = objForUpdate ? (objForUpdate.returnurl as string | null) : null;
+        let webhookUrl = objForUpdate ? (objForUpdate.webhookurl as string | null) : null;
         if (webhookUrl === 'undefined') webhookUrl = null;
         if (returnUrl === 'undefined') returnUrl = null;
         const config = withClientConfigOverrides(this.baseConfig, req, objForUpdate);
@@ -640,7 +639,7 @@ export class PaymentController {
             if (!fromWebhook) {
                 if (returnUrl) {
                     const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                    return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+                    return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderid}&TXNID=${objForUpdate.txnid}`);
                 }
 
                 renderView(req, res, vp + "result.hbs", {
@@ -657,19 +656,19 @@ export class PaymentController {
 
         if (req.body.status === "paid" && !req.body.STATUS) req.body.STATUS = "TXN_SUCCESS";
         objForUpdate.status = req.body.STATUS;
-        objForUpdate.txnId = req.body.TXNID;
+        objForUpdate.txnid = req.body.TXNID;
         objForUpdate.extra = JSON.stringify(req.body);
 
         try {
             if (isSubscription) {
-                await this.db.update(this.tableNames.SUBSCRIPTION, { id: orderToFind }, { status: 'AUTHENTICATED', updatedAt: Date.now() });
+                await this.db.update(this.tableNames.SUBSCRIPTION, { id: orderToFind }, { status: 'AUTHENTICATED', updatedat: Date.now() });
                 // Also persist a transaction record so status/history APIs find it
-                const existingTxn = await this.db.getOne(this.tableNames.TRANSACTION, { orderId: orderToFind }).catch(() => null);
+                const existingTxn = await this.db.getOne(this.tableNames.TRANSACTION, { orderid: orderToFind }).catch(() => null);
                 console.log('Saving a copy of subscription to transactions table', objForUpdate)
                 if (!existingTxn) {
                     await this.db.insert(this.tableNames.TRANSACTION, objForUpdate);
                 } else {
-                    await this.db.update(this.tableNames.TRANSACTION, { orderId: orderToFind }, objForUpdate);
+                    await this.db.update(this.tableNames.TRANSACTION, { orderid: orderToFind }, objForUpdate);
                 }
             } else {
                 await this.db.update(this.tableNames.TRANSACTION, myquery, objForUpdate);
@@ -700,7 +699,7 @@ export class PaymentController {
 
             if (returnUrl) {
                 const separator = returnUrl.indexOf('?') > -1 ? '&' : '?';
-                return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderId}&TXNID=${objForUpdate.txnId}`);
+                return res.redirect(`${returnUrl}${separator}status=${objForUpdate.status}&ORDERID=${objForUpdate.orderid}&TXNID=${objForUpdate.txnid}`);
             }
             renderView(req, res, vp + "result.hbs", {
                 theme: config.theme,
@@ -716,7 +715,7 @@ export class PaymentController {
     private async getOrder(req: Request = { body: {}, query: {} } as any, orderId?: string): Promise<NPTransaction | null> {
 
         const orderToFind = orderId || req.body.ORDERID || req.body.ORDER_ID || req.body.ORDER_ID || req.body.ORDERId || req.query.ORDERID || req.query.ORDERId || req.query.ORDER_ID || req.query.order_id;
-        const myquery = { orderId: orderToFind };
+        const myquery = { orderid: orderToFind };
         let objForUpdate: NPTransaction | null = null;
         try {
             objForUpdate = await this.db.getOne(this.tableNames.TRANSACTION, myquery).catch(() => null) as NPTransaction | null;
@@ -755,22 +754,22 @@ export class PaymentController {
 
         // Razorpay Subscription Callback Handling
         if (!objForUpdate && req.body.razorpay_subscription_id) {
-            const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { gateway_subscription_id: req.body.razorpay_subscription_id }) as NPSubscription;
+            const sub = await this.db.getOne(this.tableNames.SUBSCRIPTION, { gatewaysubscriptionid: req.body.razorpay_subscription_id }) as NPSubscription;
             if (sub) {
                 console.log('Found matching subscription', sub)
                 isSubscriptionCallback = true;
                 const [plan, user] = await Promise.all(
                     [
-                        this.db.getOne(this.tableNames.PLAN, { id: sub.planId }).catch(() => null),
-                        this.db.getOne(this.tableNames.USER, { id: sub.cusId }).catch(() => null)
+                        this.db.getOne(this.tableNames.PLAN, { id: sub.planid }).catch(() => null),
+                        this.db.getOne(this.tableNames.USER, { id: sub.cusid }).catch(() => null)
                     ]
                 ) as [NPPlan, NPUser];
 
                 // Create a virtual transaction object for the callback processor
                 objForUpdate = {
                     id: sub.id,
-                    orderId: sub.id,
-                    cusId: sub.cusId,
+                    orderid: sub.id,
+                    cusid: sub.cusid,
                     time: Date.now(),
                     status: 'INITIATED',
                     name: user?.name || '',
@@ -780,11 +779,11 @@ export class PaymentController {
                     pname: plan?.name || 'Subscription Authentication',
                     extra: JSON.stringify(req.body) || '',
                     state: sub.state || '',
-                    clientId: sub.clientId,
-                    returnUrl: sub.returnUrl || '',
-                    webhookUrl: sub.webhookUrl || '',
-                    isSubscription: true,
-                    subscriptionId: sub.id
+                    clientid: sub.clientid,
+                    returnurl: sub.returnurl || '',
+                    webhookurl: sub.webhookurl || '',
+                    issubscription: true,
+                    subscriptionid: sub.id
                 };
             }
         }
@@ -824,7 +823,7 @@ export class PaymentController {
                     req.body.TXNID = req.body.razorpay_payment_id;
 
                     // Update local subscription status
-                    await this.db.update(this.tableNames.SUBSCRIPTION, { id: objForUpdate?.id }, { status: 'AUTHENTICATED', updatedAt: Date.now() });
+                    await this.db.update(this.tableNames.SUBSCRIPTION, { id: objForUpdate?.id }, { status: 'AUTHENTICATED', updatedat: Date.now() });
                 }
                 else if (objForUpdate) {
                     req.body.ORDERID = objForUpdate?.id;
@@ -1067,10 +1066,10 @@ export class PaymentController {
                 id = "pay_" + makeid(config.id_length || IDLEN)
             }
 
-            const txnTask = {
+            const txnTask: NPTransaction = {
                 id: id,
-                orderId: id,
-                cusId: user.id,
+                orderid: id,
+                cusid: user.id,
                 time: Date.now(),
                 status: 'INITIATED',
                 name: user.name,
@@ -1078,34 +1077,39 @@ export class PaymentController {
                 phone: user.phone,
                 amount: req.body.TXN_AMOUNT,
                 pname: req.body.PRODUCT_NAME,
-                returnUrl: req.body.RETURN_URL || '',
-                webhookUrl: req.body.WEBHOOK_URL || '',
+                returnurl: req.body.RETURN_URL || '',
+                webhookurl: req.body.WEBHOOK_URL || '',
                 extra: (req.body.EXTRA || ''),
                 state: req.body.STATE || '',
-                clientId: req.body.CLIENT_ID || ''
+                clientid: req.body.CLIENT_ID || ''
 
             };
 
 
-            const txn = await this.insertTransactionInDb(txnTask as NPTransaction) as NPTransaction & { payurl?: string };
+            const txn = await this.insertTransactionInDb(txnTask) as NPTransaction & { payurl?: string; orderId?: string; returnUrl?: string; webhookUrl?: string; clientId?: string };
             const urlData64 = this.encodeTxnDataForUrl(JSON.stringify({
                 NAME: txn.name,
                 EMAIL: txn.email,
                 MOBILE_NO: txn.phone,
-                ORDER_ID: txn.orderId,
-                RETURN_URL: txn.returnUrl,
-                WEBHOOK_URL: txn.webhookUrl,
+                ORDER_ID: txn.orderid,
+                RETURN_URL: txn.returnurl,
+                WEBHOOK_URL: txn.webhookurl,
                 TXN_AMOUNT: txn.amount,
                 PRODUCT_NAME: txn.pname,
-                clientId: txn.clientId,
-                CLIENT_ID: txn.clientId,
+                clientId: txn.clientid,
+                CLIENT_ID: txn.clientid,
                 STATE: txn.state,
             }), req)
 
             txn.payurl = config.host_url + '/' + config.path_prefix + '/init?to=' + urlData64;
-            if (txn.clientId) {
-                txn.payurl += `&client_id=${txn.clientId}`;
+            if (txn.clientid) {
+                txn.payurl += `&client_id=${txn.clientid}`;
             }
+            // Backward-compat aliases in JSON response
+            txn.orderId = txn.orderid;
+            txn.returnUrl = txn.returnurl;
+            txn.webhookUrl = txn.webhookurl;
+            txn.clientId = txn.clientid;
             res.send(txn)
         } catch (err) {
 
@@ -1200,7 +1204,7 @@ export class PaymentController {
             res.status(400).send({ message: "Missing ORDER_ID" })
             return
         }
-        const myquery = { orderId: req.body.ORDER_ID };
+        const myquery = { orderid: req.body.ORDER_ID };
         const orderData = await this.db.getOne(this.tableNames.TRANSACTION, myquery).catch((err) => {
             res.send(err)
             return null;
@@ -1228,7 +1232,7 @@ export class PaymentController {
             const onStatusUpdate = async (paytmResponse: any) => {
                 if (paytmResponse.TXNID && paytmResponse.TXNID.length > 4) {
                     orderData.status = paytmResponse.STATUS;
-                    orderData.txnId = paytmResponse.TXNID;
+                    orderData.txnid = paytmResponse.TXNID;
                     orderData.extra = JSON.stringify(paytmResponse);
 
                     try {

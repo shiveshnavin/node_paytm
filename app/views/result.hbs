@@ -13,11 +13,11 @@
     <div class="result-grid" style="max-width:560px; width:100%;">
       <div class="result-item">
         <p class="label">Order ID</p>
-        <p class="value">{{orderId}}</p>
+        <p class="value">{{#if orderid}}{{orderid}}{{else}}{{orderId}}{{/if}}</p>
       </div>
       <div class="result-item">
         <p class="label">Transaction ID</p>
-        <p class="value">{{txnId}}</p>
+        <p class="value">{{#if txnid}}{{txnid}}{{else}}{{txnId}}{{/if}}</p>
       </div>
       <div class="result-item">
         <p class="label">Amount</p>

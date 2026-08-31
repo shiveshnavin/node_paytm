@@ -31,14 +31,14 @@ export async function handleSubscriptionWebhook(
         }
 
         // Find the local subscription
-        const sub = await db.getOne(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { gateway_subscription_id }) as NPSubscription;
+        const sub = await db.getOne(tableNames.SUBSCRIPTION, { gatewaysubscriptionid: gateway_subscription_id }) as NPSubscription;
         if (!sub) {
             console.log("Subscription not found for webhook:", gateway_subscription_id);
             res.status(200).send({ message: "Subscription not found locally" });
             return;
         }
 
-        const clientConf = withClientConfigOverrides(baseConfig, req, { clientId: sub.clientId } as any);
+        const clientConf = withClientConfigOverrides(baseConfig, req, { clientId: sub.clientid } as any);
         const razorPayInstance = new RazorpayAdapter();
 
         let signatureValid;
@@ -62,12 +62,12 @@ export async function handleSubscriptionWebhook(
                 statusChanged = true;
 
                 // Trigger Setup Success Webhook
-                const planAuth = await db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null) as NPPlan;
-                const userAuth = await db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null) as NPUser;
+                const planAuth = await db.getOne(tableNames.PLAN, { id: sub.planid }).catch(() => null) as NPPlan;
+                const userAuth = await db.getOne(tableNames.USER, { id: sub.cusid }).catch(() => null) as NPUser;
                 const authTxn: NPTransaction = {
                     id: sub.id,
-                    orderId: sub.id,
-                    cusId: sub.cusId,
+                    orderid: sub.id,
+                    cusid: sub.cusid,
                     time: Date.now(),
                     status: 'TXN_SUCCESS',
                     name: userAuth?.name || '',
@@ -76,28 +76,28 @@ export async function handleSubscriptionWebhook(
                     amount: planAuth?.amount || 0,
                     pname: planAuth?.name || 'Subscription Authentication',
                     extra: JSON.stringify(subEntity),
-                    txnId: paymentEntity?.id || '',
+                    txnid: paymentEntity?.id || '',
                     state: sub.state,
-                    clientId: sub.clientId,
-                    returnUrl: sub.returnUrl || '',
-                    webhookUrl: sub.webhookUrl || '',
-                    isSubscription: true,
-                    subscriptionId: sub.id
+                    clientid: sub.clientid,
+                    returnurl: sub.returnurl || '',
+                    webhookurl: sub.webhookurl || '',
+                    issubscription: true,
+                    subscriptionid: sub.id
                 };
 
                 // Persist if doesn't exist
-                const existingAuth = await db.getOne(tableNames.TRANSACTION, { orderId: sub.id }).catch(() => null);
+                const existingAuth = await db.getOne(tableNames.TRANSACTION, { orderid: sub.id }).catch(() => null);
                 if (!existingAuth) {
                     await db.insert(tableNames.TRANSACTION, authTxn);
                 } else {
-                    await db.update(tableNames.TRANSACTION, { orderId: sub.id }, {
+                    await db.update(tableNames.TRANSACTION, { orderid: sub.id }, {
                         ...existingAuth,
                         ...authTxn
                     });
                 }
 
-                if (sub.webhookUrl) {
-                    try { await axios.post(sub.webhookUrl, authTxn); } catch (e) { }
+                if (sub.webhookurl) {
+                    try { await axios.post(sub.webhookurl, authTxn); } catch (e) { }
                 }
                 break;
             case "subscription.activated":
@@ -131,27 +131,27 @@ export async function handleSubscriptionWebhook(
         }
 
         if (statusChanged) {
-            sub.updatedAt = Date.now();
-            await db.update(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
+            sub.updatedat = Date.now();
+            await db.update(tableNames.SUBSCRIPTION, { id: sub.id }, sub);
         }
 
         // Trigger client payment webhook ONLY on actual charges or definitive failures
         if (event === "subscription.charged" && paymentEntity) {
             sub.status = 'ACTIVE';
-            await db.update(tableNames.TRANSACTION.replace('transactions', 'subscriptions'), { id: sub.id }, sub);
+            await db.update(tableNames.SUBSCRIPTION, { id: sub.id }, sub);
 
             const [plan, user] = await Promise.all(
                 [
-                    db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null),
-                    db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null)
+                    db.getOne(tableNames.PLAN, { id: sub.planid }).catch(() => null),
+                    db.getOne(tableNames.USER, { id: sub.cusid }).catch(() => null)
                 ]
             ) as [NPPlan, NPUser];
             // Create a new transaction record for this specific charge
             const txnId = paymentEntity.order_id || ('order_' + makeid(10));
             const newTxn: NPTransaction = {
                 id: txnId,
-                orderId: txnId, // Use txnId as orderId for recurring payments since there is no explicit user-created order
-                cusId: sub.cusId,
+                orderid: txnId, // Use txnId as orderId for recurring payments since there is no explicit user-created order
+                cusid: sub.cusid,
                 time: Date.now(),
                 status: 'TXN_SUCCESS',
                 name: user?.name || '',
@@ -161,30 +161,30 @@ export async function handleSubscriptionWebhook(
                 pname: plan?.name || 'Subscription Charge',
                 extra: JSON.stringify(paymentEntity),
                 state: sub.state,
-                txnId: paymentEntity.id,
-                clientId: sub.clientId,
-                returnUrl: sub.returnUrl,
-                webhookUrl: sub.webhookUrl,
-                isSubscription: true,
-                subscriptionId: sub.id
+                txnid: paymentEntity.id,
+                clientid: sub.clientid,
+                returnurl: sub.returnurl || '',
+                webhookurl: sub.webhookurl || '',
+                issubscription: true,
+                subscriptionid: sub.id
             };
 
             await db.insert(tableNames.TRANSACTION, newTxn);
 
             // Trigger client webhook
-            if (sub.webhookUrl) {
+            if (sub.webhookurl) {
                 try {
-                    await axios.post(sub.webhookUrl, newTxn);
-                    console.log("Sent subscription webhook to ", sub.webhookUrl, 'txnId:', paymentEntity.id);
+                    await axios.post(sub.webhookurl, newTxn);
+                    console.log("Sent subscription webhook to ", sub.webhookurl, 'txnId:', paymentEntity.id);
                 } catch (e: any) {
-                    console.log("Error sending subscription webhook to ", sub.webhookUrl, e?.message || e);
+                    console.log("Error sending subscription webhook to ", sub.webhookurl, e?.message || e);
                 }
             }
         } else if (event === "subscription.halted") {
             const [plan, user] = await Promise.all(
                 [
-                    db.getOne(tableNames.PLAN, { id: sub.planId }).catch(() => null),
-                    db.getOne(tableNames.USER, { id: sub.cusId }).catch(() => null)
+                    db.getOne(tableNames.PLAN, { id: sub.planid }).catch(() => null),
+                    db.getOne(tableNames.USER, { id: sub.cusid }).catch(() => null)
                 ]
             ) as [NPPlan, NPUser];
 
@@ -192,8 +192,8 @@ export async function handleSubscriptionWebhook(
             const txnId = 'txn_' + makeid(10);
             const newTxn: NPTransaction = {
                 id: txnId,
-                orderId: txnId,
-                cusId: sub.cusId,
+                orderid: txnId,
+                cusid: sub.cusid,
                 time: Date.now(),
                 status: 'TXN_FAILURE',
                 name: user?.name || '',
@@ -202,18 +202,18 @@ export async function handleSubscriptionWebhook(
                 amount: plan?.amount || 0,
                 pname: plan?.name ? `${plan.name} (Halted)` : 'Subscription Halted',
                 extra: JSON.stringify(subEntity),
-                txnId: '',
+                txnid: '',
                 state: sub.state,
-                clientId: sub.clientId,
-                returnUrl: sub.returnUrl,
-                webhookUrl: sub.webhookUrl,
-                isSubscription: true,
-                subscriptionId: sub.id
+                clientid: sub.clientid,
+                returnurl: sub.returnurl || '',
+                webhookurl: sub.webhookurl || '',
+                issubscription: true,
+                subscriptionid: sub.id
             };
             await db.insert(tableNames.TRANSACTION, newTxn);
-            if (sub.webhookUrl) {
+            if (sub.webhookurl) {
                 try {
-                    await axios.post(sub.webhookUrl, newTxn);
+                    await axios.post(sub.webhookurl, newTxn);
                 } catch (e: any) { }
             }
         }

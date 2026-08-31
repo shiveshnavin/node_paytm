@@ -6,37 +6,33 @@ export interface NPUser {
     name: string;
     email: string;
     phone: string;
-    createdAt?: number;
+    createdat?: number;
 }
 
 /**
- * NPTransaction is the interface for the transaction object stored in the database. It contains all the details of a transaction, including the order ID, customer ID, time of transaction, status, name, email, phone number, amount, product name, and any extra information.
- * time: in miliseconds
- * status: can be 'TXN_SUCCESS', 'TXN_FAILURE', 'PENDING', 'INITIATED'
- * extra: json can be used to store any extra information related to the transaction, such as the payment method used, the bank name, etc.
+ * NPTransaction is the interface for the transaction object stored in the database.
  */
 export interface NPTransaction {
-    id: string
-    orderId: string,
-    cusId: string,
-    time: Number,
-    timeStamp?: Number,
-    status: string,
-    name: string,
-    email: string,
-    phone: string,
-    amount: Number,
-    pname: string,
-    extra: string
-    state?: string
-    readonly?: string,
-    txnId?: string,
-    TXNID?: string,
-    clientId: string,
-    returnUrl: string
-    webhookUrl: string
-    isSubscription?: boolean
-    subscriptionId?: string
+    id: string;
+    orderid: string;
+    cusid: string;
+    time: number;
+    timestamp?: number;
+    status: string;
+    name: string;
+    email: string;
+    phone: string;
+    amount: number;
+    pname: string;
+    extra: string;
+    state?: string;
+    readonly?: string;
+    txnid?: string;
+    clientid: string;
+    returnurl: string;
+    webhookurl: string;
+    issubscription?: boolean;
+    subscriptionid?: string;
 }
 
 export interface NPPlan {
@@ -46,31 +42,31 @@ export interface NPPlan {
     amount: number;
     currency: string;
     period: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    plan_interval: number;
-    trial_days?: number;
-    gateway_plan_id?: string;
-    clientId: string;
-    is_deleted?: boolean;
-    createdAt?: number;
-    updatedAt?: number;
+    planinterval: number;
+    trialdays?: number;
+    gatewayplanid?: string;
+    clientid: string;
+    isdeleted?: boolean;
+    createdat?: number;
+    updatedat?: number;
 }
 
 export interface NPSubscription {
     id: string; // Generated internally or provided by client
-    planId: string; // References NPPlan.id
-    cusId: string; // References NPUser.id
+    planid: string; // References NPPlan.id
+    cusid: string; // References NPUser.id
     status: string; // 'CREATED', 'AUTHENTICATED', 'ACTIVE', 'CANCELLED', 'HALTED', 'COMPLETED', 'EXPIRED'
-    gateway_subscription_id?: string;
-    short_url?: string;
-    clientId: string;
-    returnUrl?: string;
-    webhookUrl?: string;
-    createdAt?: number;
-    updatedAt?: number;
-    expire_by?: number;
-    start_at?: number;
-    extra: string
-    state: string
+    gatewaysubscriptionid?: string;
+    shorturl?: string;
+    clientid: string;
+    returnurl?: string;
+    webhookurl?: string;
+    createdat?: number;
+    updatedat?: number;
+    expireby?: number;
+    startat?: number;
+    extra: string;
+    state: string;
 }
 
 export interface NPCallbacks {

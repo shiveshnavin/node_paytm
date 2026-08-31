@@ -19,7 +19,7 @@ export class RazorpayAdapter implements ISubscriptionProvider {
 
         const payload = {
             period: plan.period,
-            interval: plan.plan_interval,
+            interval: plan.planinterval,
             item: {
                 name: plan.name,
                 description: plan.description || plan.name,
@@ -36,15 +36,15 @@ export class RazorpayAdapter implements ISubscriptionProvider {
         const instance = this.getInstance(config);
 
         const payload: any = {
-            plan_id: plan.gateway_plan_id,
+            plan_id: plan.gatewayplanid,
             total_count: 120, // A reasonably large default total count to act as 'perpetual' unless overwritten, can be customized later
             customer_notify: 1 // Let razorpay handle links
         };
 
         // Trial Period Implementation
-        if (plan.trial_days && plan.trial_days > 0) {
+        if (plan.trialdays && plan.trialdays > 0) {
             // start_at should be a unix timestamp (in seconds)
-            const trialEndTimestamp = Math.floor(Date.now() / 1000) + (plan.trial_days * 24 * 60 * 60);
+            const trialEndTimestamp = Math.floor(Date.now() / 1000) + (plan.trialdays * 24 * 60 * 60);
             payload.start_at = trialEndTimestamp;
         }
 
